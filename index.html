@@ -16,20 +16,14 @@
         .tab { background: #fff; padding: 5px 12px; border-radius: 12px; font-size: 13px; color: #8e8e93; border: 0.5px solid #d1d1d6; }
         .tab.active { background: #007AFF; color: #fff; border-color: #007AFF; }
         .grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 10px; padding: 10px; }
-        
-        /* 2. 排序摇晃动画 */
         @keyframes wobble { 0% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } 100% { transform: rotate(-1.2deg); } }
         .sorting-mode .card { animation: wobble 0.25s infinite; touch-action: none; }
         .sorting-mode .dragging { opacity: 0.5; transform: scale(1.1); animation: none; z-index: 10; }
-
         .card { background: white; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); aspect-ratio: 1 / 1; display: flex; flex-direction: column; overflow: hidden; position: relative; transition: transform 0.2s; }
         .card-title { font-weight: bold; font-size: var(--t-size); margin-bottom: 6px; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-content { font-size: var(--c-size); color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; line-height: 1.4; pointer-events: none; }
-        
-        /* 3. 分类标签池 */
         .tag-pool { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 10px; border: 1px dashed #ccc; }
         .tag-chip { background: #fff; color: #007AFF; padding: 6px 12px; border-radius: 15px; font-size: 12px; border: 0.5px solid #007AFF; font-weight: 500; }
-
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
         .modal-content { background: #fff; width: 85%; margin: 15% auto; border-radius: 20px; padding: 20px; max-height: 80vh; overflow-y: auto; }
         .setting-row { margin: 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid #eee; padding-bottom: 10px; }
@@ -74,7 +68,7 @@
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button style="background: #ff3b30; color: #fff;" id="deleteBtn" onclick="deleteItem()">删除</button>
             <button onclick="toggleModal('editModal')">取消</button>
-            <button class="save-btn" onclick="saveItem()">保存</button>
+            <button class="save-btn" onclick="saveItem()">保存修改</button>
         </div>
     </div>
 </div>
@@ -103,36 +97,60 @@ let currentTag = '全部';
 let isSorting = false;
 let editId = null;
 
-// 4. 自动粘贴与强力导入
+// 【重磅强化】暴力解码引擎 + 自动粘贴修复
 async function importData() {
     let clipboardText = "";
-    try { clipboardText = await navigator.clipboard.readText(); } catch (err) {}
-    let str = prompt('请粘贴备份代码：', clipboardText);
-    if(!str) return;
-    str = str.trim();
-    let decoded = "";
     try {
-        try { decoded = decodeURIComponent(escape(atob(str))); } 
-        catch(e1) {
-            try { decoded = decodeURIComponent(atob(str)); }
-            catch(e2) { decoded = atob(str); }
+        // 增加权限判断，避免直接报错导致脚本停止
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            clipboardText = await navigator.clipboard.readText();
         }
-        const res = JSON.parse(decoded);
-        if(res.data && res.config) {
-            data = res.data; config = res.config;
-            localStorage.setItem('pb_data', JSON.stringify(data));
-            localStorage.setItem('pb_config', JSON.stringify(config));
-            alert('导入成功！'); location.reload();
-        }
-    } catch(e) { alert('导入失败：格式无效'); }
+    } catch (err) { console.log("剪贴板访问受限"); }
+
+    let str = prompt('请粘贴备份代码：', clipboardText);
+    if(!str || str.trim() === "") return;
+    str = str.trim();
+
+    // 暴力尝试所有可能的解码路径
+    let decoded = "";
+    let success = false;
+
+    const decodeAttempts = [
+        (s) => decodeURIComponent(escape(atob(s))), // 标准 UTF-8
+        (s) => decodeURIComponent(atob(s)),         // 旧版直接编码
+        (s) => decodeURI(atob(s)),                  // 极简编码
+        (s) => atob(s)                              // 原始 Base64
+    ];
+
+    for (let attempt of decodeAttempts) {
+        try {
+            decoded = attempt(str);
+            let parsed = JSON.parse(decoded);
+            if (parsed.data) {
+                data = parsed.data;
+                if (parsed.config) config = parsed.config;
+                success = true;
+                break; 
+            }
+        } catch (e) { continue; }
+    }
+
+    if (success) {
+        localStorage.setItem('pb_data', JSON.stringify(data));
+        localStorage.setItem('pb_config', JSON.stringify(config));
+        showToast('✅ 导入成功');
+        setTimeout(() => location.reload(), 500);
+    } else {
+        alert('❌ 导入失败：备份代码格式无法识别，请确保复制完整。');
+    }
 }
 
 function exportData() {
     const str = btoa(unescape(encodeURIComponent(JSON.stringify({data, config}))));
-    navigator.clipboard.writeText(str).then(() => { showToast('✅ 备份已存入剪贴板'); });
+    navigator.clipboard.writeText(str).then(() => { showToast('✅ 备份代码已复制'); });
 }
 
-// 5. 排序功能逻辑
+// 排序功能回归
 function initSortable(el) {
     let dragEl = null;
     el.addEventListener('touchstart', e => { if (isSorting) { dragEl = e.target.closest('.card'); if(dragEl) dragEl.classList.add('dragging'); } }, {passive: false});
@@ -152,28 +170,27 @@ function initSortable(el) {
 }
 function saveCurrentOrder() {
     const ids = Array.from(document.querySelectorAll('.card')).map(c => c.dataset.id);
-    let newData = [];
-    ids.forEach(id => { let item = data.find(d => d.id == id); if (item) newData.push(item); });
-    data = newData; localStorage.setItem('pb_data', JSON.stringify(data));
+    data = ids.map(id => data.find(d => d.id == id)).filter(i => i);
+    localStorage.setItem('pb_data', JSON.stringify(data));
 }
 function enterSortMode() { isSorting = true; doHaptic(); document.getElementById('normalNav').style.display='none'; document.getElementById('sortNav').style.display='flex'; document.body.classList.add('sorting-mode'); }
 function exitSortMode() { isSorting = false; doHaptic(); document.getElementById('normalNav').style.display='flex'; document.getElementById('sortNav').style.display='none'; document.body.classList.remove('sorting-mode'); renderGrid(); showToast('✅ 顺序已保存'); }
 
-// 6. 分类标签池渲染
 function renderTagPool() {
     const pool = document.getElementById('tagPool'); pool.innerHTML = '';
     let allTags = new Set([...config.tags, ...data.map(d => d.tag)]);
-    allTags.delete('未分类'); allTags.delete('');
     allTags.forEach(tag => {
+        if(!tag) return;
         const chip = document.createElement('div'); chip.className = 'tag-chip'; chip.innerText = tag;
         chip.onclick = () => { document.getElementById('editTag').value = tag; doHaptic(); };
         pool.appendChild(chip);
     });
 }
 
-function resetEverything() { if(confirm('彻底清空吗？')) { localStorage.clear(); location.reload(); } }
+function resetEverything() { if(confirm('⚠️ 确定要清空所有数据吗？')) { localStorage.clear(); location.reload(); } }
 function showToast(text) { const t = document.getElementById('toast'); t.innerText = text; t.style.display = 'block'; setTimeout(() => { t.style.display = 'none'; }, 2000); }
 function doHaptic() { if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(25); }
+
 function renderTabs() {
     const container = document.getElementById('tabsList');
     container.innerHTML = `<div class="tab ${currentTag==='全部'?'active':''}" onclick="filterTag('全部')">全部</div>`;
