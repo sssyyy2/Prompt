@@ -11,7 +11,9 @@
         body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 8px; padding-top: 100px; -webkit-user-select: none; }
         .header-fixed { position: fixed; top: 0; left: 0; right: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(15px); z-index: 1000; border-bottom: 0.5px solid #d1d1d6; padding-bottom: 12px; }
         .nav-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; height: 44px; }
-        .nav-bar h1 { font-size: 19px; margin: 0; font-weight: 800; }
+        .nav-bar h1 { font-size: 19px; margin: 0; font-weight: 800; flex-grow: 1; text-align: center; }
+        .nav-left, .nav-right { display: flex; align-items: center; gap: 15px; width: 80px; }
+        .nav-right { justify-content: flex-end; }
         .tabs-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 10px; overflow-x: auto; white-space: nowrap; }
         .tab { background: #fff; padding: 5px 12px; border-radius: 12px; font-size: 13px; color: #8e8e93; border: 0.5px solid #d1d1d6; }
         .tab.active { background: #007AFF; color: #fff; border-color: #007AFF; }
@@ -40,10 +42,13 @@
 <div class="header-fixed">
     <div class="nav-bar">
         <div id="normalNav" style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
-            <span onclick="toggleModal('settingsModal')" style="font-size:18px;">⚙️</span>
+            <div class="nav-left">
+                <span onclick="toggleModal('settingsModal')" style="font-size:18px;">⚙️</span>
+                <span onclick="exportToLocalFile()" style="font-size:18px;">💾</span>
+            </div>
             <h1>指令库</h1>
-            <div>
-                <span onclick="enterSortMode()" style="color:#007AFF; margin-right: 15px; font-size:18px;">⇅</span>
+            <div class="nav-right">
+                <span onclick="enterSortMode()" style="color:#007AFF; font-size:18px;">⇅</span>
                 <span onclick="openAddModal()" style="color:#007AFF; font-size:24px">+</span>
             </div>
         </div>
@@ -85,8 +90,7 @@
         <div class="setting-row">默认标签:</div>
         <textarea id="cfgTags" rows="2"></textarea>
         <hr style="margin:20px 0; border:0.5px solid #eee;">
-        <button onclick="exportToLocalFile()" style="background:#34C759; color:#fff;">💾 保存数据到本地 Txt</button>
-        <button onclick="document.getElementById('fileInput').click()" style="background:#f2f2f7; color:#000; margin-top:10px;">📂 从 Txt 文件导入恢复</button>
+        <button onclick="document.getElementById('fileInput').click()" style="background:#f2f2f7; color:#000;">📂 从 Txt 文件导入恢复</button>
         <button onclick="resetEverything()" class="danger-btn">⚠️ 重置并清空</button>
         <button onclick="applySettings()" class="save-btn" style="margin-top:20px;">保存并关闭</button>
     </div>
@@ -100,13 +104,18 @@ let currentTag = '全部', isSorting = false, editId = null;
 // --- 本地文件存取 ---
 function exportToLocalFile() {
     const jsonStr = JSON.stringify({data, config});
+    // 使用 UTF-8 编码处理中文字符
     const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
     const blob = new Blob([base64], {type: "text/plain"});
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `指令库备份_${new Date().toLocaleDateString()}.txt`;
+    // 生成带具体时间的文件名，防止覆盖
+    const now = new Date();
+    const fileName = `指令备份_${now.getMonth()+1}月${now.getDate()}日_${now.getHours()}时${now.getMinutes()}分.txt`;
+    link.download = fileName;
     link.click();
-    showToast('已生成备份，请选择“存储到文件”');
+    showToast('💾 正在生成备份文件...');
+    doHaptic();
 }
 
 document.getElementById('fileInput').addEventListener('change', function(e) {
@@ -129,7 +138,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
     reader.readAsText(file);
 });
 
-// --- 其他功能代码（保持一致） ---
+// --- 功能函数 ---
 function initSortable(el) {
     let dragEl = null;
     el.addEventListener('touchstart', e => { if (isSorting) { dragEl = e.target.closest('.card'); if(dragEl) dragEl.classList.add('dragging'); } }, {passive: false});
