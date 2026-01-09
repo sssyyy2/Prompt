@@ -45,7 +45,7 @@
     <div class="nav-bar">
         <div id="normalNav" style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
             <span onclick="toggleModal('settingsModal')" style="color:#007AFF">⚙️设置</span>
-            <h1 style="font-size: 16px;">指令库 Pro</h1>
+            <h1 style="font-size: 16px;">指令库</h1>
             <div><span onclick="enterSortMode()" style="color:#007AFF; margin-right: 15px;">⇅排序</span><span onclick="openAddModal()" style="color:#007AFF; font-size:24px">+</span></div>
         </div>
         <div id="sortNav" style="display: none; width: 100%; justify-content: center; align-items: center;">
@@ -92,7 +92,7 @@
 
 <script>
 let data = JSON.parse(localStorage.getItem('pb_data')) || [];
-let config = JSON.parse(localStorage.getItem('pb_config')) || { cols: 3, tSize: 15, cSize: 10, haptic: true, tags: ["工作", "学术", "生活"] };
+let config = JSON.parse(localStorage.getItem('pb_config')) || { cols: 3, tSize: 15, cSize: 10, haptic: true, tags: ["投资", "阅读"] };
 let currentTag = '全部';
 let isSorting = false;
 let editId = null;
