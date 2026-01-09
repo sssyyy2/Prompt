@@ -15,44 +15,30 @@
         .tab { background: #fff; padding: 6px 12px; border-radius: 15px; font-size: 13px; color: #8e8e93; border: 0.5px solid #d1d1d6; }
         .tab.active { background: #007AFF; color: #fff; border-color: #007AFF; }
         .grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 12px; padding-top: 10px; }
-        
         .card { background: white; border-radius: 14px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); aspect-ratio: 1 / 1; display: flex; flex-direction: column; position: relative; transition: transform 0.2s; }
         .card-title { font-weight: bold; font-size: var(--t-size); margin-bottom: 5px; color: #000; word-break: break-all; }
         .card-content { font-size: var(--c-size); color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; pointer-events: none; }
-
-        /* 抖动动画 */
-        @keyframes wobble {
-            0% { transform: rotate(-1.2deg); }
-            50% { transform: rotate(1.2deg); }
-            100% { transform: rotate(-1.2deg); }
-        }
-        .sorting-mode .card { animation: wobble 0.25s infinite; touch-action: none; } /* 关键：禁止系统默认触摸动作 */
-        .sorting-mode .card:nth-child(even) { animation-duration: 0.28s; }
+        @keyframes wobble { 0% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } 100% { transform: rotate(-1.2deg); } }
+        .sorting-mode .card { animation: wobble 0.25s infinite; touch-action: none; }
         .sorting-mode .dragging { opacity: 0.5; transform: scale(1.1); animation: none; z-index: 10; }
-
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
         .modal-content { background: #fff; width: 85%; margin: 15% auto; border-radius: 20px; padding: 20px; max-height: 80vh; overflow-y: auto; }
         .setting-row { margin: 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid #eee; padding-bottom: 10px; }
         textarea, input[type="text"] { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 8px; margin-top: 5px; box-sizing: border-box; font-size: 16px; }
         button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold; font-size: 15px; }
         .save-btn { background: #007AFF; color: #fff; }
-        .del-btn { background: #ff3b30; color: #fff; }
         #toast { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 25px; font-size: 14px; display: none; z-index: 3000; white-space: nowrap; }
     </style>
 </head>
 <body>
 
 <div id="toast"></div>
-
 <div class="header-fixed">
     <div class="nav-bar">
         <div id="normalNav" style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
             <span onclick="toggleModal('settingsModal')" style="color:#007AFF">⚙️设置</span>
             <h1>我的指令库</h1>
-            <div>
-                <span onclick="enterSortMode()" style="color:#007AFF; margin-right: 15px;">⇅排序</span>
-                <span onclick="openAddModal()" style="color:#007AFF; font-size:24px">+</span>
-            </div>
+            <div><span onclick="enterSortMode()" style="color:#007AFF; margin-right: 15px;">⇅排序</span><span onclick="openAddModal()" style="color:#007AFF; font-size:24px">+</span></div>
         </div>
         <div id="sortNav" style="display: none; width: 100%; justify-content: center; align-items: center;">
             <button onclick="exitSortMode()" class="save-btn" style="max-width: 140px; height: 34px; padding: 0;">完成排序</button>
@@ -60,22 +46,7 @@
     </div>
     <div class="tabs-container" id="tabsList"></div>
 </div>
-
 <div class="grid" id="promptGrid"></div>
-
-<div id="editModal" class="modal">
-    <div class="modal-content">
-        <h3 id="modalTitle">编辑指令</h3>
-        <input type="text" id="editTitle" placeholder="标题">
-        <textarea id="editContent" rows="6" placeholder="内容"></textarea>
-        <input type="text" id="editTag" placeholder="分类标签">
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button class="del-btn" id="deleteBtn" onclick="deleteItem()">删除</button>
-            <button onclick="toggleModal('editModal')">取消</button>
-            <button class="save-btn" onclick="saveItem()">保存</button>
-        </div>
-    </div>
-</div>
 
 <div id="settingsModal" class="modal">
     <div class="modal-content">
@@ -93,198 +64,65 @@
     </div>
 </div>
 
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle">编辑指令</h3>
+        <input type="text" id="editTitle" placeholder="标题">
+        <textarea id="editContent" rows="6" placeholder="内容"></textarea>
+        <input type="text" id="editTag" placeholder="分类标签">
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button style="background: #ff3b30; color: #fff;" id="deleteBtn" onclick="deleteItem()">删除</button>
+            <button onclick="toggleModal('editModal')">取消</button>
+            <button class="save-btn" onclick="saveItem()">保存</button>
+        </div>
+    </div>
+</div>
+
 <script>
 let data = JSON.parse(localStorage.getItem('pb_data')) || [];
 let config = JSON.parse(localStorage.getItem('pb_config')) || { cols: 2, tSize: 18, cSize: 12, haptic: true, tags: ["工作", "生活"] };
 let currentTag = '全部';
 let isSorting = false;
 
-// 核心排序逻辑
+// 核心排序函数
 function initSortable(el) {
     let dragEl = null;
-
-    el.addEventListener('touchstart', function(e) {
-        if (!isSorting) return;
-        dragEl = e.target.closest('.card');
-        if (dragEl) dragEl.classList.add('dragging');
-    }, {passive: false});
-
-    el.addEventListener('touchmove', function(e) {
+    el.addEventListener('touchstart', e => { if (isSorting) { dragEl = e.target.closest('.card'); if(dragEl) dragEl.classList.add('dragging'); } }, {passive: false});
+    el.addEventListener('touchmove', e => {
         if (!isSorting || !dragEl) return;
-        e.preventDefault(); // 关键：阻止滚动
+        e.preventDefault();
         let touch = e.touches[0];
         let target = document.elementFromPoint(touch.clientX, touch.clientY);
         let nextEl = target ? target.closest('.card') : null;
-
         if (nextEl && nextEl !== dragEl) {
             let rect = nextEl.getBoundingClientRect();
             let next = (touch.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
             el.insertBefore(dragEl, next && nextEl.nextSibling || nextEl);
         }
     }, {passive: false});
-
-    el.addEventListener('touchend', function() {
-        if (dragEl) {
-            dragEl.classList.remove('dragging');
-            saveCurrentOrder();
-            dragEl = null;
-        }
-    });
+    el.addEventListener('touchend', () => { if (dragEl) { dragEl.classList.remove('dragging'); saveCurrentOrder(); dragEl = null; } });
 }
 
 function saveCurrentOrder() {
     const ids = Array.from(document.querySelectorAll('.card')).map(c => c.dataset.id);
     let newData = [];
-    ids.forEach(id => {
-        let item = data.find(d => d.id == id);
-        if (item) newData.push(item);
-    });
-    data.forEach(d => {
-        if (!ids.includes(d.id.toString())) newData.push(d);
-    });
+    ids.forEach(id => { let item = data.find(d => d.id == id); if (item) newData.push(item); });
+    data.forEach(d => { if (!ids.includes(d.id.toString())) newData.push(d); });
     data = newData;
     localStorage.setItem('pb_data', JSON.stringify(data));
 }
 
-function showToast(text) {
-    const t = document.getElementById('toast');
-    t.innerText = text; t.style.display = 'block';
-    setTimeout(() => { t.style.display = 'none'; }, 2000);
-}
-
-function doHaptic() { if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(25); }
-
-function enterSortMode() {
-    isSorting = true;
-    doHaptic();
-    document.getElementById('normalNav').style.display = 'none';
-    document.getElementById('sortNav').style.display = 'flex';
-    document.body.classList.add('sorting-mode');
-}
-
-function exitSortMode() {
-    isSorting = false;
-    doHaptic();
-    document.getElementById('normalNav').style.display = 'flex';
-    document.getElementById('sortNav').style.display = 'none';
-    document.body.classList.remove('sorting-mode');
-    showToast('✅ 顺序已同步');
-}
-
-function renderTabs() {
-    const container = document.getElementById('tabsList');
-    container.innerHTML = `<div class="tab ${currentTag==='全部'?'active':''}" onclick="filterTag('全部')">全部</div>`;
-    config.tags.forEach(tag => {
-        container.innerHTML += `<div class="tab ${currentTag===tag?'active':''}" onclick="filterTag('${tag}')">${tag}</div>`;
-    });
-}
-
-function filterTag(tag) { if(isSorting) return; doHaptic(); currentTag = tag; renderTabs(); renderGrid(); }
-
-function renderGrid() {
-    const grid = document.getElementById('promptGrid');
-    grid.innerHTML = '';
-    const filtered = data.filter(item => currentTag === '全部' || item.tag === currentTag);
-    filtered.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.dataset.id = item.id;
-        card.innerHTML = `<div class="card-title">${item.title}</div><div class="card-content">${item.content}</div>`;
-        card.onclick = () => {
-            if(isSorting) return;
-            navigator.clipboard.writeText(item.content).then(() => { doHaptic(); showToast('已复制！'); });
-        };
-        let timer;
-        card.ontouchstart = (e) => { 
-            if(!isSorting) timer = setTimeout(() => openEditModal(item.id), 800); 
-        };
-        card.ontouchend = () => clearTimeout(timer);
-        grid.appendChild(card);
-    });
-    updateStyles();
-}
-
-function updateStyles() {
-    document.documentElement.style.setProperty('--cols', config.cols);
-    document.documentElement.style.setProperty('--t-size', config.tSize + 'px');
-    document.documentElement.style.setProperty('--c-size', config.cSize + 'px');
-}
-
-function toggleModal(id) {
-    const m = document.getElementById(id);
-    m.style.display = (m.style.display === 'block') ? 'none' : 'block';
-    if(id === 'settingsModal') {
-        document.getElementById('cfgCols').value = config.cols;
-        document.getElementById('cfgTSize').value = config.tSize;
-        document.getElementById('cfgCSize').value = config.cSize;
-        document.getElementById('cfgHaptic').checked = config.haptic;
-        document.getElementById('cfgTags').value = config.tags.join(',');
+async function importData() {
+    let clipboardText = "";
+    try {
+        // 尝试自动读取剪贴板
+        clipboardText = await navigator.clipboard.readText();
+    } catch (err) {
+        console.log("无法自动读取剪贴板");
     }
-}
-
-function applySettings() {
-    config.cols = document.getElementById('cfgCols').value;
-    config.tSize = document.getElementById('cfgTSize').value;
-    config.cSize = document.getElementById('cfgCSize').value;
-    config.haptic = document.getElementById('cfgHaptic').checked;
-    config.tags = document.getElementById('cfgTags').value.split(',').map(t=>t.trim()).filter(t=>t!=='');
-    localStorage.setItem('pb_config', JSON.stringify(config));
-    toggleModal('settingsModal'); renderTabs(); renderGrid();
-}
-
-function openAddModal() {
-    editId = null;
-    document.getElementById('modalTitle').innerText = "新增指令";
-    document.getElementById('editTitle').value = '';
-    document.getElementById('editContent').value = '';
-    document.getElementById('editTag').value = currentTag === '全部' ? '' : currentTag;
-    document.getElementById('deleteBtn').style.display = 'none';
-    toggleModal('editModal');
-}
-
-let editId = null;
-function openEditModal(id) {
-    editId = id;
-    const item = data.find(d => d.id === id);
-    document.getElementById('modalTitle').innerText = "编辑指令";
-    document.getElementById('editTitle').value = item.title;
-    document.getElementById('editContent').value = item.content;
-    document.getElementById('editTag').value = item.tag;
-    document.getElementById('deleteBtn').style.display = 'block';
-    toggleModal('editModal');
-}
-
-function saveItem() {
-    const title = document.getElementById('editTitle').value;
-    const content = document.getElementById('editContent').value;
-    const tag = document.getElementById('editTag').value || '未分类';
-    if(editId) {
-        const idx = data.findIndex(d => d.id === editId);
-        data[idx] = {...data[idx], title, content, tag};
-    } else {
-        data.push({id: Date.now(), title, content, tag});
-    }
-    if(!config.tags.includes(tag) && tag !== '未分类') config.tags.push(tag);
-    localStorage.setItem('pb_data', JSON.stringify(data));
-    localStorage.setItem('pb_config', JSON.stringify(config));
-    toggleModal('editModal'); renderTabs(); renderGrid();
-}
-
-function deleteItem() {
-    if(confirm('确定删除吗？')) {
-        data = data.filter(d => d.id !== editId);
-        localStorage.setItem('pb_data', JSON.stringify(data));
-        toggleModal('editModal'); renderGrid();
-    }
-}
-
-function exportData() {
-    const str = btoa(unescape(encodeURIComponent(JSON.stringify({data, config}))));
-    navigator.clipboard.writeText(str).then(() => { showToast('✅ 备份已存入剪贴板'); });
-}
-
-function importData() {
-    const str = prompt('请粘贴备份代码：');
+    
+    // 弹窗提示，如果读取到了内容，就自动填入默认值
+    const str = prompt('请粘贴备份代码：', clipboardText);
     if(str) {
         try {
             const res = JSON.parse(decodeURIComponent(escape(atob(str))));
@@ -296,7 +134,39 @@ function importData() {
     }
 }
 
-// 启动初始化
+function exportData() {
+    const str = btoa(unescape(encodeURIComponent(JSON.stringify({data, config}))));
+    navigator.clipboard.writeText(str).then(() => { showToast('✅ 备份已存入剪贴板'); });
+}
+
+// 辅助函数保持原样
+function showToast(text) { const t = document.getElementById('toast'); t.innerText = text; t.style.display = 'block'; setTimeout(() => { t.style.display = 'none'; }, 2000); }
+function doHaptic() { if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(25); }
+function enterSortMode() { isSorting = true; doHaptic(); document.getElementById('normalNav').style.display='none'; document.getElementById('sortNav').style.display='flex'; document.body.classList.add('sorting-mode'); }
+function exitSortMode() { isSorting = false; doHaptic(); document.getElementById('normalNav').style.display='flex'; document.getElementById('sortNav').style.display='none'; document.body.classList.remove('sorting-mode'); renderGrid(); showToast('✅ 顺序已保存'); }
+function renderTabs() { const container = document.getElementById('tabsList'); container.innerHTML = `<div class="tab ${currentTag==='全部'?'active':''}" onclick="filterTag('全部')">全部</div>`; config.tags.forEach(tag => { container.innerHTML += `<div class="tab ${currentTag===tag?'active':''}" onclick="filterTag('${tag}')">${tag}</div>`; }); }
+function filterTag(tag) { if(isSorting) return; doHaptic(); currentTag = tag; renderTabs(); renderGrid(); }
+function renderGrid() {
+    const grid = document.getElementById('promptGrid'); grid.innerHTML = '';
+    const filtered = data.filter(item => currentTag === '全部' || item.tag === currentTag);
+    filtered.forEach(item => {
+        const card = document.createElement('div'); card.className = 'card'; card.dataset.id = item.id;
+        card.innerHTML = `<div class="card-title">${item.title}</div><div class="card-content">${item.content}</div>`;
+        card.onclick = () => { if(isSorting) return; navigator.clipboard.writeText(item.content).then(() => { doHaptic(); showToast('已复制！'); }); };
+        let timer; card.ontouchstart = () => { if(!isSorting) timer = setTimeout(() => openEditModal(item.id), 800); };
+        card.ontouchend = () => clearTimeout(timer); grid.appendChild(card);
+    });
+    updateStyles();
+}
+function updateStyles() { document.documentElement.style.setProperty('--cols', config.cols); document.documentElement.style.setProperty('--t-size', config.tSize + 'px'); document.documentElement.style.setProperty('--c-size', config.cSize + 'px'); }
+function toggleModal(id) { const m = document.getElementById(id); m.style.display = (m.style.display === 'block') ? 'none' : 'block'; if(id === 'settingsModal') { document.getElementById('cfgCols').value = config.cols; document.getElementById('cfgTSize').value = config.tSize; document.getElementById('cfgCSize').value = config.cSize; document.getElementById('cfgHaptic').checked = config.haptic; document.getElementById('cfgTags').value = config.tags.join(','); } }
+function applySettings() { config.cols = document.getElementById('cfgCols').value; config.tSize = document.getElementById('cfgTSize').value; config.cSize = document.getElementById('cfgCSize').value; config.haptic = document.getElementById('cfgHaptic').checked; config.tags = document.getElementById('cfgTags').value.split(',').map(t=>t.trim()).filter(t=>t!==''); localStorage.setItem('pb_config', JSON.stringify(config)); toggleModal('settingsModal'); renderTabs(); renderGrid(); }
+function openAddModal() { editId = null; document.getElementById('modalTitle').innerText = "新增指令"; document.getElementById('editTitle').value = ''; document.getElementById('editContent').value = ''; document.getElementById('editTag').value = currentTag === '全部' ? '' : currentTag; document.getElementById('deleteBtn').style.display = 'none'; toggleModal('editModal'); }
+let editId = null;
+function openEditModal(id) { editId = id; const item = data.find(d => d.id === id); document.getElementById('modalTitle').innerText = "编辑指令"; document.getElementById('editTitle').value = item.title; document.getElementById('editContent').value = item.content; document.getElementById('editTag').value = item.tag; document.getElementById('deleteBtn').style.display = 'block'; toggleModal('editModal'); }
+function saveItem() { const title = document.getElementById('editTitle').value; const content = document.getElementById('editContent').value; const tag = document.getElementById('editTag').value || '未分类'; if(editId) { const idx = data.findIndex(d => d.id === editId); data[idx] = {...data[idx], title, content, tag}; } else { data.push({id: Date.now(), title, content, tag}); } if(!config.tags.includes(tag) && tag !== '未分类') config.tags.push(tag); localStorage.setItem('pb_data', JSON.stringify(data)); localStorage.setItem('pb_config', JSON.stringify(config)); toggleModal('editModal'); renderTabs(); renderGrid(); }
+function deleteItem() { if(confirm('确定删除吗？')) { data = data.filter(d => d.id !== editId); localStorage.setItem('pb_data', JSON.stringify(data)); toggleModal('editModal'); renderGrid(); } }
+
 initSortable(document.getElementById('promptGrid'));
 renderTabs();
 renderGrid();
