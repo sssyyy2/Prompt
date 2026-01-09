@@ -27,13 +27,12 @@
         button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold; font-size: 15px; }
         .save-btn { background: #007AFF; color: #fff; }
         .del-btn { background: #ff3b30; color: #fff; }
-        /* 吐司提示样式 */
-        #toast { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 3000; }
+        #toast { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 25px; font-size: 14px; display: none; z-index: 3000; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
     </style>
 </head>
 <body>
 
-<div id="toast">已复制到剪贴板</div>
+<div id="toast"></div>
 
 <div class="header-fixed">
     <div class="nav-bar">
@@ -70,17 +69,16 @@
         <div class="setting-row">分类标签 (逗号分隔):</div>
         <textarea id="cfgTags" rows="3"></textarea>
         <hr style="margin:20px 0; border:0.5px solid #eee;">
-        <button onclick="exportData()" style="background:#f2f2f7; color:#000;">备份(导出)数据</button>
-        <button onclick="importData()" style="background:#f2f2f7; color:#000; margin-top:10px;">恢复(导入)数据</button>
+        <button onclick="exportData()" style="background:#f2f2f7; color:#007AFF;">一键备份 (复制到剪贴板)</button>
+        <button onclick="importData()" style="background:#f2f2f7; color:#000; margin-top:10px;">导入 (粘贴备份代码)</button>
         <button onclick="applySettings()" class="save-btn" style="margin-top:20px;">完成并应用</button>
     </div>
 </div>
 
 <script>
-    /** 核心拖拽库 Sortable.js (极简版内嵌) **/
-    !function(t,e){"object"==typeof exports&&"undefined"!=typeof module?module.exports=e():"function"==typeof define&&define.amd?define(e):(t=t||self).Sortable=e()}(this,function(){"use strict";function t(t){return(t=t.replace(/\s+/g,"")).split(",")}function e(t,e){var n=t.className;if(!n)return-1;var r=n.split(" ");return r.indexOf(e)}var n={animation:150};function r(t){this.el=t,this.options=Object.assign({},n),t["Sortable"+Date.now()]=this;var e=null,n=null;t.addEventListener("dragstart",function(t){e=t.target,t.dataTransfer.effectAllowed="move"}),t.addEventListener("dragover",function(t){t.preventDefault(),t.dataTransfer.dropEffect="move";var r=t.target.closest(".card")||t.target.closest(".tab");if(r&&r!==e){var o=r.getBoundingClientRect(),i=t.clientY>o.top+o.height/2;r.parentNode.insertBefore(e,i?r.nextSibling:r)}}),t.addEventListener("dragend",function(){n&&n()})}r.prototype.setEnd=function(t){this.onEnd=t};return function(t,e){var n=new r(t);n.options=Object.assign(n.options,e),t.querySelectorAll(".card, .tab").forEach(function(t){t.draggable=!0}),t.addEventListener("dragend",function(){e.onEnd&&e.onEnd()})}});
+    // 极简版 Sortable 逻辑
+    !function(t,e){"object"==typeof exports&&"undefined"!=typeof module?module.exports=e():"function"==typeof define&&define.amd?define(e):(t=t||self).Sortable=e()}(this,function(){"use strict";function r(t){this.el=t;t.addEventListener("dragstart",function(t){t.dataTransfer.effectAllowed="move"});t.addEventListener("dragover",function(t){t.preventDefault();var r=t.target.closest(".card")||t.target.closest(".tab");if(r){var o=r.getBoundingClientRect(),i=t.clientY>o.top+o.height/2;r.parentNode.insertBefore(window._dragEl,i?r.nextSibling:r)}})}return function(t,e){new r(t);t.querySelectorAll(".card, .tab").forEach(function(t){t.draggable=!0;t.addEventListener("dragstart",function(){window._dragEl=t});t.addEventListener("dragend",function(){e.onEnd&&e.onEnd()})})}});
 
-    /** App 逻辑代码 **/
     let data = JSON.parse(localStorage.getItem('pb_data')) || [];
     let config = JSON.parse(localStorage.getItem('pb_config')) || { cols: 2, tSize: 18, cSize: 12, haptic: true, tags: ["工作", "生活"] };
     let currentTag = '全部';
@@ -90,12 +88,10 @@
         const t = document.getElementById('toast');
         t.innerText = text;
         t.style.display = 'block';
-        setTimeout(() => { t.style.display = 'none'; }, 2000);
+        setTimeout(() => { t.style.display = 'none'; }, 2500);
     }
 
-    function doHaptic() {
-        if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(20);
-    }
+    function doHaptic() { if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(20); }
 
     function renderTabs() {
         const container = document.getElementById('tabsList');
@@ -103,7 +99,7 @@
         config.tags.forEach(tag => {
             container.innerHTML += `<div class="tab ${currentTag===tag?'active':''}" onclick="filterTag('${tag}')">${tag}</div>`;
         });
-        new Sortable(container, { animation: 150, onEnd: () => {
+        new Sortable(container, { onEnd: () => {
             config.tags = Array.from(container.querySelectorAll('.tab')).map(el => el.innerText).filter(t => t !== '全部');
             saveConfig();
         }});
@@ -121,16 +117,17 @@
             card.dataset.id = item.id;
             card.innerHTML = `<div class="card-title">${item.title}</div><div class="card-content">${item.content}</div>`;
             card.onclick = () => {
-                navigator.clipboard.writeText(item.content);
-                doHaptic();
-                showToast('已复制！');
+                navigator.clipboard.writeText(item.content).then(() => {
+                    doHaptic();
+                    showToast('已复制到剪贴板！');
+                });
             };
             let timer;
             card.ontouchstart = () => { timer = setTimeout(() => openEditModal(item.id), 800); };
             card.ontouchend = () => clearTimeout(timer);
             grid.appendChild(card);
         });
-        new Sortable(grid, { animation: 150, onEnd: () => {
+        new Sortable(grid, { onEnd: () => {
             const ids = Array.from(grid.querySelectorAll('.card')).map(el => el.dataset.id);
             let newData = [];
             ids.forEach(id => { const itm = data.find(d => d.id == id); if(itm) newData.push(itm); });
@@ -212,7 +209,11 @@
 
     function exportData() {
         const str = btoa(unescape(encodeURIComponent(JSON.stringify({data, config}))));
-        prompt('请复制备份代码：', str);
+        navigator.clipboard.writeText(str).then(() => {
+            showToast('✅ 备份代码已存入剪贴板！');
+        }).catch(() => {
+            prompt('复制失败，请手动全选复制：', str);
+        });
     }
 
     function importData() {
@@ -221,8 +222,10 @@
             try {
                 const res = JSON.parse(decodeURIComponent(escape(atob(str))));
                 data = res.data; config = res.config;
-                saveData(); saveConfig(); location.reload();
-            } catch(e) { alert('无效代码'); }
+                saveData(); saveConfig(); 
+                showToast('🚀 恢复成功！');
+                setTimeout(() => location.reload(), 1200);
+            } catch(e) { alert('代码无效，请重新尝试'); }
         }
     }
 
