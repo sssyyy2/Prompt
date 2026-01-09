@@ -8,7 +8,7 @@
     <title>指令库</title>
     <style>
         :root { --t-size: 15px; --c-size: 10px; --cols: 3; }
-        /* 【关键改动】padding 从 20px 改为 8px，利用起左右边距 */
+        /* 【窄边框生效】左右 8px，极大化利用空间 */
         body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 8px; padding-top: 100px; -webkit-user-select: none; }
         .header-fixed { position: fixed; top: 0; left: 0; right: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(15px); z-index: 1000; border-bottom: 0.5px solid #d1d1d6; padding-bottom: 12px; }
         .nav-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; height: 44px; }
@@ -17,7 +17,7 @@
         .tab { background: #fff; padding: 5px 12px; border-radius: 12px; font-size: 13px; color: #8e8e93; border: 0.5px solid #d1d1d6; }
         .tab.active { background: #007AFF; color: #fff; border-color: #007AFF; }
         
-        /* 【关键改动】gap 从 10px 降为 6px，让方块更紧凑，标题空间更大 */
+        /* 【窄缝隙生效】方块更宽，标题显示更全 */
         .grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 6px; padding: 5px 0; }
         
         @keyframes wobble { 0% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } 100% { transform: rotate(-1.2deg); } }
@@ -25,7 +25,6 @@
         .sorting-mode .dragging { opacity: 0.5; transform: scale(1.1); animation: none; z-index: 10; }
 
         .card { background: white; border-radius: 12px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); aspect-ratio: 1 / 1; display: flex; flex-direction: column; overflow: hidden; position: relative; transition: transform 0.2s; }
-        /* 这里的标题会因为父容器变宽而获得更多显示空间 */
         .card-title { font-weight: bold; font-size: var(--t-size); margin-bottom: 6px; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-content { font-size: var(--c-size); color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; line-height: 1.4; pointer-events: none; }
         
@@ -105,6 +104,7 @@ let currentTag = '全部';
 let isSorting = false;
 let editId = null;
 
+// 【终极对齐逻辑】支持 URI 和 Base64
 async function importData() {
     let clipboardText = "";
     try { clipboardText = await navigator.clipboard.readText(); } catch (err) {}
@@ -113,7 +113,11 @@ async function importData() {
     str = str.trim();
     try {
         let decoded = "";
-        try { decoded = decodeURIComponent(str); } catch(e) {
+        // 核心：先尝试 URI 解码，再尝试各种 Base64 变体
+        try { 
+            decoded = decodeURIComponent(str); 
+            if (!decoded.includes('{"data"')) throw "Not URI";
+        } catch(e) {
             try { decoded = decodeURIComponent(escape(atob(str))); }
             catch(e2) { decoded = decodeURIComponent(atob(str)); }
         }
@@ -124,14 +128,16 @@ async function importData() {
             localStorage.setItem('pb_config', JSON.stringify(config));
             showToast('✅ 导入成功'); setTimeout(() => location.reload(), 500);
         }
-    } catch(e) { alert('❌ 导入失败'); }
+    } catch(e) { alert('❌ 格式无效，请确保复制完整'); }
 }
 
 function exportData() {
+    // 采用最稳健的百分号编码
     const str = encodeURIComponent(JSON.stringify({data, config}));
     navigator.clipboard.writeText(str).then(() => { showToast('✅ 备份代码已复制'); });
 }
 
+// 排序、渲染、设置等其他功能（保持不变）
 function initSortable(el) {
     let dragEl = null;
     el.addEventListener('touchstart', e => { if (isSorting) { dragEl = e.target.closest('.card'); if(dragEl) dragEl.classList.add('dragging'); } }, {passive: false});
@@ -156,7 +162,6 @@ function saveCurrentOrder() {
 }
 function enterSortMode() { isSorting = true; doHaptic(); document.getElementById('normalNav').style.display='none'; document.getElementById('sortNav').style.display='flex'; document.body.classList.add('sorting-mode'); }
 function exitSortMode() { isSorting = false; doHaptic(); document.getElementById('normalNav').style.display='flex'; document.getElementById('sortNav').style.display='none'; document.body.classList.remove('sorting-mode'); renderGrid(); showToast('✅ 顺序已存'); }
-
 function renderTagPool() {
     const pool = document.getElementById('tagPool'); pool.innerHTML = '';
     let allTags = new Set([...config.tags, ...data.map(d => d.tag)]);
