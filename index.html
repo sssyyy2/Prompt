@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>指令库-完整功能修正版</title>
+    <title>指令库-终极稳定版</title>
     <style>
         :root { --t-size: 15px; --c-size: 10px; --cols: 3; }
         body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 8px; padding-top: 100px; -webkit-user-select: none; }
@@ -15,7 +15,6 @@
         .tab.active { background: #007AFF; color: #fff; border-color: #007AFF; }
         .grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 6px; padding: 5px 0; }
         
-        /* 排序动画与样式 - 完全保留 */
         @keyframes wobble { 0% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } 100% { transform: rotate(-1.2deg); } }
         .sorting-mode .card { animation: wobble 0.25s infinite; touch-action: none; }
         .sorting-mode .dragging { opacity: 0.5; transform: scale(1.1); animation: none; z-index: 10; }
@@ -100,25 +99,43 @@ let currentTag = '全部';
 let isSorting = false;
 let editId = null;
 
-// 【核心修复：最强解码兼容】
+// 【终极解决方案：使用 UTF-8 安全的 Base64 编码】
+function exportData() {
+    const jsonStr = JSON.stringify({data, config});
+    // 先转成 UTF-8 编码，再转 Base64，彻底解决中文、符号乱码问题
+    const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
+    const textArea = document.createElement("textarea");
+    textArea.value = base64;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+        document.execCommand('copy');
+        showToast('✅ 备份代码已复制');
+    } catch (err) {
+        alert('手动复制此代码：' + base64);
+    }
+    document.body.removeChild(textArea);
+}
+
 async function importData() {
-    let clipboardText = "";
-    try { clipboardText = await navigator.clipboard.readText(); } catch (err) {}
-    let str = prompt('请粘贴备份代码：', clipboardText);
+    let str = prompt('请粘贴备份代码：');
     if(!str || str.trim() === "") return;
     str = str.trim();
     try {
-        let decoded = str;
-        // 自动循环解码，直到变成标准 JSON 格式
-        if (decoded.includes('%')) { decoded = decodeURIComponent(decoded); }
-        // 容错处理：确保如果是双重编码也能解开
-        if (decoded.startsWith('%')) { decoded = decodeURIComponent(decoded); }
+        let decodedStr;
+        if (str.startsWith('%')) {
+            // 兼容你之前的旧格式
+            decodedStr = decodeURIComponent(str);
+        } else {
+            // 解码 Base64
+            decodedStr = decodeURIComponent(escape(atob(str)));
+        }
         
-        let res = JSON.parse(decoded);
+        let res = JSON.parse(decodedStr);
         if(res.data) {
             data = res.data; 
             if(res.config) config = res.config;
-            // 确保设置项是数字类型
+            // 强制转换为数字，防止 UI 失效
             config.cols = parseInt(config.cols) || 3;
             config.tSize = parseInt(config.tSize) || 15;
             config.cSize = parseInt(config.cSize) || 10;
@@ -127,27 +144,12 @@ async function importData() {
             localStorage.setItem('pb_config', JSON.stringify(config));
             showToast('✅ 导入成功'); setTimeout(() => location.reload(), 500);
         }
-    } catch(e) { alert('❌ 导入失败：数据格式不匹配'); }
-}
-
-// 【核心修复：导出不再二次加密】
-function exportData() {
-    // 改为直接导出 JSON 字符串，确保“自产自销”不认的情况永不发生
-    const str = JSON.stringify({data, config});
-    const textArea = document.createElement("textarea");
-    textArea.value = str;
-    document.body.appendChild(textArea);
-    textArea.select();
-    try {
-        document.execCommand('copy');
-        showToast('✅ 备份代码已复制');
-    } catch (err) {
-        alert('请手动复制：' + str);
+    } catch(e) {
+        alert('❌ 导入失败：代码不完整或格式不支持');
     }
-    document.body.removeChild(textArea);
 }
 
-// --- 以下所有交互逻辑 100% 还原自你的底稿 ---
+// --- 保持你的所有功能完全不动 ---
 function initSortable(el) {
     let dragEl = null;
     el.addEventListener('touchstart', e => { if (isSorting) { dragEl = e.target.closest('.card'); if(dragEl) dragEl.classList.add('dragging'); } }, {passive: false});
