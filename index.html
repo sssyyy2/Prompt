@@ -154,10 +154,15 @@ function renderGrid() {
     document.documentElement.style.setProperty('--c-size', config.cSize + 'px');
 }
 function toggleModal(id) {
-    const m = document.getElementById(id); m.style.display = (m.style.display === 'block') ? 'none' : 'block';
+    const m = document.getElementById(id);
+    m.style.display = (m.style.display === 'block') ? 'none' : 'block';
     if(id === 'settingsModal') {
-        ['cfgCols','cfgTSize','cfgCSize'].forEach(k => document.getElementById(k).value = config[k.slice(3).toLowerCase()]);
-        document.getElementById('cfgHaptic').checked = config.haptic; document.getElementById('cfgTags').value = config.tags.join(',');
+        // 修正：直接读取 config 对象中的属性，确保数值正确填入输入框
+        document.getElementById('cfgCols').value = config.cols;
+        document.getElementById('cfgTSize').value = config.tSize;
+        document.getElementById('cfgCSize').value = config.cSize;
+        document.getElementById('cfgHaptic').checked = config.haptic;
+        document.getElementById('cfgTags').value = config.tags.join(',');
     }
 }
 function applySettings() {
