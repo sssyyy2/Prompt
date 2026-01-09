@@ -7,23 +7,16 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         :root { --t-size: 18px; --c-size: 12px; --cols: 2; }
-        body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; padding-top: 120px; -webkit-user-select: none; }
+        body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; padding-top: 100px; -webkit-user-select: none; }
         
-        /* 顶部固定栏 */
-        .header-fixed { position: fixed; top: 0; left: 0; right: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(15px); z-index: 1000; border-bottom: 0.5px solid #d1d1d6; padding-bottom: 10px; }
+        .header-fixed { position: fixed; top: 0; left: 0; right: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(15px); z-index: 1000; border-bottom: 0.5px solid #d1d1d6; padding-bottom: 12px; }
         .nav-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; }
         .nav-bar h1 { font-size: 17px; margin: 0; }
         
-        /* 搜索框 */
-        .search-container { padding: 0 15px 10px; }
-        #searchBar { width: 100%; border: none; background: #e3e3e8; padding: 8px 12px; border-radius: 10px; box-sizing: border-box; outline: none; }
-
-        /* 分类标签 - 自动换行 */
         .tabs-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 15px; }
-        .tab { background: #fff; padding: 6px 12px; border-radius: 15px; font-size: 13px; color: #8e8e93; border: 0.5px solid #d1d1d6; cursor: pointer; }
+        .tab { background: #fff; padding: 6px 12px; border-radius: 15px; font-size: 13px; color: #8e8e93; border: 0.5px solid #d1d1d6; cursor: pointer; transition: all 0.2s; }
         .tab.active { background: #007AFF; color: #fff; border-color: #007AFF; }
 
-        /* 指令栅格 */
         .grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 12px; padding-top: 10px; }
         .card { 
             background: white; border-radius: 14px; padding: 15px; 
@@ -33,13 +26,12 @@
         .card-title { font-weight: bold; font-size: var(--t-size); margin-bottom: 5px; color: #000; word-break: break-all; }
         .card-content { font-size: var(--c-size); color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; }
 
-        /* 设置面板 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
         .modal-content { background: #fff; width: 85%; margin: 15% auto; border-radius: 20px; padding: 20px; max-height: 80vh; overflow-y: auto; }
         .setting-row { margin: 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid #eee; padding-bottom: 10px; }
-        textarea, input[type="text"] { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 8px; margin-top: 5px; }
+        textarea, input[type="text"] { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 8px; margin-top: 5px; box-sizing: border-box; }
         .btn-group { display: flex; gap: 10px; margin-top: 20px; }
-        button { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: bold; }
+        button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold; font-size: 15px; }
         .save-btn { background: #007AFF; color: #fff; }
         .del-btn { background: #ff3b30; color: #fff; }
     </style>
@@ -49,14 +41,10 @@
 <div class="header-fixed">
     <div class="nav-bar">
         <span onclick="toggleModal('settingsModal')" style="color:#007AFF">⚙️设置</span>
-        <h1>PromptBox Pro</h1>
+        <h1>我的指令库</h1>
         <span onclick="openAddModal()" style="color:#007AFF; font-size:24px">+</span>
     </div>
-    <div class="search-container">
-        <input type="text" id="searchBar" placeholder="搜索指令..." oninput="renderGrid()">
-    </div>
-    <div class="tabs-container" id="tabsList">
-        </div>
+    <div class="tabs-container" id="tabsList"></div>
 </div>
 
 <div class="grid" id="promptGrid"></div>
@@ -82,31 +70,27 @@
         <div class="setting-row">标题字号: <input type="number" id="cfgTSize" style="width:50px"></div>
         <div class="setting-row">内容字号: <input type="number" id="cfgCSize" style="width:50px"></div>
         <div class="setting-row">触感反馈: <input type="checkbox" id="cfgHaptic"></div>
-        <div class="setting-row">分类排序(逗号分隔): <textarea id="cfgTags"></textarea></div>
-        <hr>
-        <button onclick="exportData()">备份(导出)数据</button>
-        <button onclick="importData()" style="margin-top:10px">恢复(导入)数据</button>
-        <button onclick="toggleModal('settingsModal')" class="save-btn" style="margin-top:20px">完成并应用</button>
+        <div class="setting-row">分类标签 (逗号分隔):</div>
+        <textarea id="cfgTags" rows="3"></textarea>
+        <hr style="margin:20px 0; border:0.5px solid #eee;">
+        <button onclick="exportData()" style="background:#f2f2f7; color:#000;">备份(导出)数据</button>
+        <button onclick="importData()" style="background:#f2f2f7; color:#000; margin-top:10px;">恢复(导入)数据</button>
+        <button onclick="applySettings()" class="save-btn" style="margin-top:20px;">完成并应用</button>
     </div>
 </div>
 
 <script>
-    let data = JSON.parse(localStorage.getItem('pb_data')) || [
-        {id:1, title: "翻译", content: "请将以下内容翻译成英文：", tag: "工作"},
-        {id:2, title: "周报助手", content: "帮我美化这段工作内容：", tag: "工作"}
-    ];
+    let data = JSON.parse(localStorage.getItem('pb_data')) || [];
     let config = JSON.parse(localStorage.getItem('pb_config')) || {
         cols: 2, tSize: 18, cSize: 12, haptic: true, tags: ["工作", "生活"]
     };
     let currentTag = '全部';
     let editId = null;
 
-    // 初始化震动功能
     function doHaptic() {
         if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(10);
     }
 
-    // 渲染分类标签
     function renderTabs() {
         const container = document.getElementById('tabsList');
         container.innerHTML = `<div class="tab ${currentTag==='全部'?'active':''}" onclick="filterTag('全部')">全部</div>`;
@@ -114,13 +98,11 @@
             container.innerHTML += `<div class="tab ${currentTag===tag?'active':''}" onclick="filterTag('${tag}')">${tag}</div>`;
         });
         
-        // 开启标签拖拽排序
         new Sortable(container, {
             animation: 150,
-            onEnd: (evt) => {
+            onEnd: () => {
                 const newTags = Array.from(container.querySelectorAll('.tab'))
-                    .map(el => el.innerText)
-                    .filter(t => t !== '全部');
+                    .map(el => el.innerText).filter(t => t !== '全部');
                 config.tags = newTags;
                 saveConfig();
             }
@@ -134,17 +116,10 @@
         renderGrid();
     }
 
-    // 渲染指令方块
     function renderGrid() {
         const grid = document.getElementById('promptGrid');
-        const keyword = document.getElementById('searchBar').value.toLowerCase();
         grid.innerHTML = '';
-        
-        const filtered = data.filter(item => {
-            const matchTag = (currentTag === '全部' || item.tag === currentTag);
-            const matchKey = (item.title.toLowerCase().includes(keyword) || item.content.toLowerCase().includes(keyword));
-            return matchTag && matchKey;
-        });
+        const filtered = data.filter(item => currentTag === '全部' || item.tag === currentTag);
 
         filtered.forEach(item => {
             const card = document.createElement('div');
@@ -152,22 +127,18 @@
             card.dataset.id = item.id;
             card.innerHTML = `<div class="card-title">${item.title}</div><div class="card-content">${item.content}</div>`;
             
-            // 短按复制
             card.onclick = () => {
                 navigator.clipboard.writeText(item.content);
                 doHaptic();
-                alert('已复制！');
+                alert('已复制到剪贴板！');
             };
 
-            // 长按编辑 (模拟)
             let timer;
             card.ontouchstart = () => { timer = setTimeout(() => openEditModal(item.id), 800); };
             card.ontouchend = () => clearTimeout(timer);
-
             grid.appendChild(card);
         });
 
-        // 开启方块拖拽排序
         new Sortable(grid, {
             animation: 150,
             onEnd: () => {
@@ -177,7 +148,6 @@
                     const item = data.find(d => d.id == id);
                     if(item) newData.push(item);
                 });
-                // 还要补上当前分类之外的数据
                 data.forEach(d => { if(!newOrderIds.includes(d.id.toString())) newData.push(d); });
                 data = newData;
                 saveData();
@@ -192,7 +162,6 @@
         document.documentElement.style.setProperty('--c-size', config.cSize + 'px');
     }
 
-    // 弹窗控制
     function toggleModal(id) {
         const m = document.getElementById(id);
         m.style.display = m.style.display === 'block' ? 'none' : 'block';
@@ -205,21 +174,14 @@
         }
     }
 
-    // 保存设置
-    window.addEventListener('click', (e) => {
-        if(e.target.className === 'modal') {
-            if(e.target.id === 'settingsModal') applySettings();
-            e.target.style.display = 'none';
-        }
-    });
-
     function applySettings() {
         config.cols = document.getElementById('cfgCols').value;
         config.tSize = document.getElementById('cfgTSize').value;
         config.cSize = document.getElementById('cfgCSize').value;
         config.haptic = document.getElementById('cfgHaptic').checked;
-        config.tags = document.getElementById('cfgTags').value.split(',').filter(t => t.trim() !== '');
+        config.tags = document.getElementById('cfgTags').value.split(',').map(t=>t.trim()).filter(t => t !== '');
         saveConfig();
+        toggleModal('settingsModal');
         renderTabs();
         renderGrid();
     }
@@ -250,7 +212,6 @@
         const title = document.getElementById('editTitle').value;
         const content = document.getElementById('editContent').value;
         const tag = document.getElementById('editTag').value || '未分类';
-        
         if(editId) {
             const idx = data.findIndex(d => d.id === editId);
             data[idx] = {...data[idx], title, content, tag};
@@ -268,7 +229,7 @@
     }
 
     function deleteItem() {
-        if(confirm('确定删除吗？')) {
+        if(confirm('确定删除此指令吗？')) {
             data = data.filter(d => d.id !== editId);
             saveData();
             toggleModal('editModal');
@@ -276,10 +237,10 @@
         }
     }
 
-    // 备份与恢复
     function exportData() {
         const str = btoa(unescape(encodeURIComponent(JSON.stringify({data, config}))));
-        prompt('请复制下方代码并保存到安全的地方：', str);
+        alert('请在接下来的对话框中复制备份代码');
+        prompt('请复制并保存此代码：', str);
     }
 
     function importData() {
@@ -287,18 +248,16 @@
         if(str) {
             try {
                 const res = JSON.parse(decodeURIComponent(escape(atob(str))));
-                data = res.data;
-                config = res.config;
+                data = res.data; config = res.config;
                 saveData(); saveConfig();
                 location.reload();
-            } catch(e) { alert('代码格式错误！'); }
+            } catch(e) { alert('恢复失败，代码无效'); }
         }
     }
 
     function saveData() { localStorage.setItem('pb_data', JSON.stringify(data)); }
     function saveConfig() { localStorage.setItem('pb_config', JSON.stringify(config)); }
 
-    // 初始渲染
     renderTabs();
     renderGrid();
 </script>
