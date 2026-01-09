@@ -3,169 +3,304 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的指令库</title>
+    <title>PromptBox Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
-        :root {
-            --title-size: 18px;
-            --content-size: 12px;
-            --columns: 2;
-        }
-        body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; padding-top: 60px; }
+        :root { --t-size: 18px; --c-size: 12px; --cols: 2; }
+        body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; padding-top: 120px; -webkit-user-select: none; }
         
-        /* 顶部栏 */
-        .header { position: fixed; top: 0; left: 0; right: 0; height: 50px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 100; border-bottom: 0.5px solid #ccc; }
-        .header h1 { font-size: 17px; margin: 0; }
-        .plus-btn { font-size: 28px; color: #007AFF; cursor: pointer; }
+        /* 顶部固定栏 */
+        .header-fixed { position: fixed; top: 0; left: 0; right: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(15px); z-index: 1000; border-bottom: 0.5px solid #d1d1d6; padding-bottom: 10px; }
+        .nav-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; }
+        .nav-bar h1 { font-size: 17px; margin: 0; }
+        
+        /* 搜索框 */
+        .search-container { padding: 0 15px 10px; }
+        #searchBar { width: 100%; border: none; background: #e3e3e8; padding: 8px 12px; border-radius: 10px; box-sizing: border-box; outline: none; }
 
-        /* 栅格布局 */
-        .grid { display: grid; grid-template-columns: repeat(var(--columns), 1fr); gap: 12px; }
-        
-        /* 方块样式 */
+        /* 分类标签 - 自动换行 */
+        .tabs-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 15px; }
+        .tab { background: #fff; padding: 6px 12px; border-radius: 15px; font-size: 13px; color: #8e8e93; border: 0.5px solid #d1d1d6; cursor: pointer; }
+        .tab.active { background: #007AFF; color: #fff; border-color: #007AFF; }
+
+        /* 指令栅格 */
+        .grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 12px; padding-top: 10px; }
         .card { 
-            background: white; border-radius: 12px; padding: 12px; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); aspect-ratio: 1 / 1;
-            display: flex; flex-direction: column; overflow: hidden;
-            position: relative; transition: transform 0.1s;
+            background: white; border-radius: 14px; padding: 15px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); aspect-ratio: 1 / 1;
+            display: flex; flex-direction: column; position: relative; cursor: grab;
         }
-        .card:active { transform: scale(0.95); background: #f0f0f0; }
-        .card-title { font-weight: bold; font-size: var(--title-size); margin-bottom: 6px; color: #000; }
-        .card-content { font-size: var(--content-size); color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
+        .card-title { font-weight: bold; font-size: var(--t-size); margin-bottom: 5px; color: #000; word-break: break-all; }
+        .card-content { font-size: var(--c-size); color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; }
 
         /* 设置面板 */
-        .settings-panel { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: none; border: 1px solid #ddd; }
-        .setting-item { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        
-        /* 弹窗 */
-        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.2); z-index: 200; }
-        input, textarea { width: 100%; margin: 10px 0; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 5px; }
-        .btns { display: flex; justify-content: space-between; }
-        .save-btn { color: #007AFF; font-weight: bold; }
-        .del-btn { color: #FF3B30; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
+        .modal-content { background: #fff; width: 85%; margin: 15% auto; border-radius: 20px; padding: 20px; max-height: 80vh; overflow-y: auto; }
+        .setting-row { margin: 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid #eee; padding-bottom: 10px; }
+        textarea, input[type="text"] { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 8px; margin-top: 5px; }
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        button { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: bold; }
+        .save-btn { background: #007AFF; color: #fff; }
+        .del-btn { background: #ff3b30; color: #fff; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <span onclick="toggleSettings()" style="color: #007AFF;">⚙️设置</span>
-    <h1>我的指令库</h1>
-    <span class="plus-btn" onclick="openModal()">+</span>
-</div>
-
-<div id="settingsPanel" class="settings-panel">
-    <div class="setting-item">每行显示几列: <input type="number" id="colInput" style="width:50px" onchange="updateStyles()"></div>
-    <div class="setting-item">标题字号: <input type="number" id="titleSizeInput" style="width:50px" onchange="updateStyles()"></div>
-    <div class="setting-item">内容字号: <input type="number" id="contentSizeInput" style="width:50px" onchange="updateStyles()"></div>
+<div class="header-fixed">
+    <div class="nav-bar">
+        <span onclick="toggleModal('settingsModal')" style="color:#007AFF">⚙️设置</span>
+        <h1>PromptBox Pro</h1>
+        <span onclick="openAddModal()" style="color:#007AFF; font-size:24px">+</span>
+    </div>
+    <div class="search-container">
+        <input type="text" id="searchBar" placeholder="搜索指令..." oninput="renderGrid()">
+    </div>
+    <div class="tabs-container" id="tabsList">
+        </div>
 </div>
 
 <div class="grid" id="promptGrid"></div>
 
-<div id="modal" class="modal">
-    <h3 id="modalTitle">新增指令</h3>
-    <input type="text" id="titleInput" placeholder="请输入标题 (如: 翻译助手)">
-    <textarea id="contentInput" rows="5" placeholder="请输入具体的 Prompt 内容"></textarea>
-    <div class="btns">
-        <span class="del-btn" id="deleteBtn" onclick="deletePrompt()">删除</span>
-        <span onclick="closeModal()">取消</span>
-        <span class="save-btn" onclick="savePrompt()">保存</span>
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle">编辑指令</h3>
+        <input type="text" id="editTitle" placeholder="标题">
+        <textarea id="editContent" rows="6" placeholder="内容"></textarea>
+        <input type="text" id="editTag" placeholder="分类标签 (例如: 工作)">
+        <div class="btn-group">
+            <button class="del-btn" id="deleteBtn" onclick="deleteItem()">删除</button>
+            <button onclick="toggleModal('editModal')">取消</button>
+            <button class="save-btn" onclick="saveItem()">保存</button>
+        </div>
+    </div>
+</div>
+
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <h3>App 设置</h3>
+        <div class="setting-row">每行方块数: <input type="number" id="cfgCols" style="width:50px"></div>
+        <div class="setting-row">标题字号: <input type="number" id="cfgTSize" style="width:50px"></div>
+        <div class="setting-row">内容字号: <input type="number" id="cfgCSize" style="width:50px"></div>
+        <div class="setting-row">触感反馈: <input type="checkbox" id="cfgHaptic"></div>
+        <div class="setting-row">分类排序(逗号分隔): <textarea id="cfgTags"></textarea></div>
+        <hr>
+        <button onclick="exportData()">备份(导出)数据</button>
+        <button onclick="importData()" style="margin-top:10px">恢复(导入)数据</button>
+        <button onclick="toggleModal('settingsModal')" class="save-btn" style="margin-top:20px">完成并应用</button>
     </div>
 </div>
 
 <script>
-    let prompts = JSON.parse(localStorage.getItem('myPrompts')) || [
-        {title: "默认指令", content: "这是一个测试指令，点击即可复制。"}
+    let data = JSON.parse(localStorage.getItem('pb_data')) || [
+        {id:1, title: "翻译", content: "请将以下内容翻译成英文：", tag: "工作"},
+        {id:2, title: "周报助手", content: "帮我美化这段工作内容：", tag: "工作"}
     ];
-    let config = JSON.parse(localStorage.getItem('myConfig')) || { cols: 2, tSize: 18, cSize: 12 };
-    let editingIndex = -1;
-    let longPressTimer;
+    let config = JSON.parse(localStorage.getItem('pb_config')) || {
+        cols: 2, tSize: 18, cSize: 12, haptic: true, tags: ["工作", "生活"]
+    };
+    let currentTag = '全部';
+    let editId = null;
 
-    function render() {
+    // 初始化震动功能
+    function doHaptic() {
+        if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(10);
+    }
+
+    // 渲染分类标签
+    function renderTabs() {
+        const container = document.getElementById('tabsList');
+        container.innerHTML = `<div class="tab ${currentTag==='全部'?'active':''}" onclick="filterTag('全部')">全部</div>`;
+        config.tags.forEach(tag => {
+            container.innerHTML += `<div class="tab ${currentTag===tag?'active':''}" onclick="filterTag('${tag}')">${tag}</div>`;
+        });
+        
+        // 开启标签拖拽排序
+        new Sortable(container, {
+            animation: 150,
+            onEnd: (evt) => {
+                const newTags = Array.from(container.querySelectorAll('.tab'))
+                    .map(el => el.innerText)
+                    .filter(t => t !== '全部');
+                config.tags = newTags;
+                saveConfig();
+            }
+        });
+    }
+
+    function filterTag(tag) {
+        doHaptic();
+        currentTag = tag;
+        renderTabs();
+        renderGrid();
+    }
+
+    // 渲染指令方块
+    function renderGrid() {
         const grid = document.getElementById('promptGrid');
+        const keyword = document.getElementById('searchBar').value.toLowerCase();
         grid.innerHTML = '';
-        prompts.forEach((p, index) => {
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.innerHTML = `<div class="card-title">${p.title}</div><div class="card-content">${p.content}</div>`;
+        
+        const filtered = data.filter(item => {
+            const matchTag = (currentTag === '全部' || item.tag === currentTag);
+            const matchKey = (item.title.toLowerCase().includes(keyword) || item.content.toLowerCase().includes(keyword));
+            return matchTag && matchKey;
+        });
+
+        filtered.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.dataset.id = item.id;
+            card.innerHTML = `<div class="card-title">${item.title}</div><div class="card-content">${item.content}</div>`;
             
             // 短按复制
-            div.onclick = () => copyToClipboard(p.content);
-            
-            // 长按编辑
-            div.ontouchstart = () => { longPressTimer = setTimeout(() => openModal(index), 800); };
-            div.ontouchend = () => clearTimeout(longPressTimer);
-            
-            grid.appendChild(div);
+            card.onclick = () => {
+                navigator.clipboard.writeText(item.content);
+                doHaptic();
+                alert('已复制！');
+            };
+
+            // 长按编辑 (模拟)
+            let timer;
+            card.ontouchstart = () => { timer = setTimeout(() => openEditModal(item.id), 800); };
+            card.ontouchend = () => clearTimeout(timer);
+
+            grid.appendChild(card);
         });
-        updateStyles(false);
+
+        // 开启方块拖拽排序
+        new Sortable(grid, {
+            animation: 150,
+            onEnd: () => {
+                const newOrderIds = Array.from(grid.querySelectorAll('.card')).map(el => el.dataset.id);
+                const newData = [];
+                newOrderIds.forEach(id => {
+                    const item = data.find(d => d.id == id);
+                    if(item) newData.push(item);
+                });
+                // 还要补上当前分类之外的数据
+                data.forEach(d => { if(!newOrderIds.includes(d.id.toString())) newData.push(d); });
+                data = newData;
+                saveData();
+            }
+        });
+        updateStyles();
     }
 
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            const tip = document.createElement('div');
-            tip.innerText = "已复制到剪贴板";
-            tip.style = "position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.7); color:white; padding:10px 20px; border-radius:20px; font-size:14px;";
-            document.body.appendChild(tip);
-            setTimeout(() => tip.remove(), 1500);
-        });
+    function updateStyles() {
+        document.documentElement.style.setProperty('--cols', config.cols);
+        document.documentElement.style.setProperty('--t-size', config.tSize + 'px');
+        document.documentElement.style.setProperty('--c-size', config.cSize + 'px');
     }
 
-    function openModal(index = -1) {
-        editingIndex = index;
-        document.getElementById('modal').style.display = 'block';
-        document.getElementById('deleteBtn').style.display = index === -1 ? 'none' : 'block';
-        if(index !== -1) {
-            document.getElementById('titleInput').value = prompts[index].title;
-            document.getElementById('contentInput').value = prompts[index].content;
-            document.getElementById('modalTitle').innerText = "编辑指令";
-        } else {
-            document.getElementById('titleInput').value = '';
-            document.getElementById('contentInput').value = '';
-            document.getElementById('modalTitle').innerText = "新增指令";
+    // 弹窗控制
+    function toggleModal(id) {
+        const m = document.getElementById(id);
+        m.style.display = m.style.display === 'block' ? 'none' : 'block';
+        if(id === 'settingsModal') {
+            document.getElementById('cfgCols').value = config.cols;
+            document.getElementById('cfgTSize').value = config.tSize;
+            document.getElementById('cfgCSize').value = config.cSize;
+            document.getElementById('cfgHaptic').checked = config.haptic;
+            document.getElementById('cfgTags').value = config.tags.join(',');
         }
     }
 
-    function savePrompt() {
-        const t = document.getElementById('titleInput').value;
-        const c = document.getElementById('contentInput').value;
-        if(editingIndex === -1) prompts.push({title: t, content: c});
-        else prompts[editingIndex] = {title: t, content: c};
-        localStorage.setItem('myPrompts', JSON.stringify(prompts));
-        closeModal();
-        render();
+    // 保存设置
+    window.addEventListener('click', (e) => {
+        if(e.target.className === 'modal') {
+            if(e.target.id === 'settingsModal') applySettings();
+            e.target.style.display = 'none';
+        }
+    });
+
+    function applySettings() {
+        config.cols = document.getElementById('cfgCols').value;
+        config.tSize = document.getElementById('cfgTSize').value;
+        config.cSize = document.getElementById('cfgCSize').value;
+        config.haptic = document.getElementById('cfgHaptic').checked;
+        config.tags = document.getElementById('cfgTags').value.split(',').filter(t => t.trim() !== '');
+        saveConfig();
+        renderTabs();
+        renderGrid();
     }
 
-    function deletePrompt() {
+    function openAddModal() {
+        editId = null;
+        document.getElementById('modalTitle').innerText = "新增指令";
+        document.getElementById('editTitle').value = '';
+        document.getElementById('editContent').value = '';
+        document.getElementById('editTag').value = currentTag === '全部' ? '' : currentTag;
+        document.getElementById('deleteBtn').style.display = 'none';
+        toggleModal('editModal');
+    }
+
+    function openEditModal(id) {
+        doHaptic();
+        editId = id;
+        const item = data.find(d => d.id === id);
+        document.getElementById('modalTitle').innerText = "编辑指令";
+        document.getElementById('editTitle').value = item.title;
+        document.getElementById('editContent').value = item.content;
+        document.getElementById('editTag').value = item.tag;
+        document.getElementById('deleteBtn').style.display = 'block';
+        toggleModal('editModal');
+    }
+
+    function saveItem() {
+        const title = document.getElementById('editTitle').value;
+        const content = document.getElementById('editContent').value;
+        const tag = document.getElementById('editTag').value || '未分类';
+        
+        if(editId) {
+            const idx = data.findIndex(d => d.id === editId);
+            data[idx] = {...data[idx], title, content, tag};
+        } else {
+            data.push({id: Date.now(), title, content, tag});
+        }
+        if(!config.tags.includes(tag) && tag !== '未分类') {
+            config.tags.push(tag);
+            saveConfig();
+        }
+        saveData();
+        toggleModal('editModal');
+        renderTabs();
+        renderGrid();
+    }
+
+    function deleteItem() {
         if(confirm('确定删除吗？')) {
-            prompts.splice(editingIndex, 1);
-            localStorage.setItem('myPrompts', JSON.stringify(prompts));
-            closeModal();
-            render();
+            data = data.filter(d => d.id !== editId);
+            saveData();
+            toggleModal('editModal');
+            renderGrid();
         }
     }
 
-    function updateStyles(save = true) {
-        if(save) {
-            config.cols = document.getElementById('colInput').value;
-            config.tSize = document.getElementById('titleSizeInput').value;
-            config.cSize = document.getElementById('contentSizeInput').value;
-            localStorage.setItem('myConfig', JSON.stringify(config));
-        } else {
-            document.getElementById('colInput').value = config.cols;
-            document.getElementById('titleSizeInput').value = config.tSize;
-            document.getElementById('contentSizeInput').value = config.cSize;
+    // 备份与恢复
+    function exportData() {
+        const str = btoa(unescape(encodeURIComponent(JSON.stringify({data, config}))));
+        prompt('请复制下方代码并保存到安全的地方：', str);
+    }
+
+    function importData() {
+        const str = prompt('请粘贴备份代码：');
+        if(str) {
+            try {
+                const res = JSON.parse(decodeURIComponent(escape(atob(str))));
+                data = res.data;
+                config = res.config;
+                saveData(); saveConfig();
+                location.reload();
+            } catch(e) { alert('代码格式错误！'); }
         }
-        document.documentElement.style.setProperty('--columns', config.cols);
-        document.documentElement.style.setProperty('--title-size', config.tSize + 'px');
-        document.documentElement.style.setProperty('--content-size', config.cSize + 'px');
     }
 
-    function toggleSettings() {
-        const p = document.getElementById('settingsPanel');
-        p.style.display = p.style.display === 'block' ? 'none' : 'block';
-    }
+    function saveData() { localStorage.setItem('pb_data', JSON.stringify(data)); }
+    function saveConfig() { localStorage.setItem('pb_config', JSON.stringify(config)); }
 
-    function closeModal() { document.getElementById('modal').style.display = 'none'; }
-
-    render();
+    // 初始渲染
+    renderTabs();
+    renderGrid();
 </script>
 </body>
 </html>
