@@ -5,39 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PromptBox Pro</title>
     <link rel="apple-touch-icon" href="icon.png">
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         :root { --t-size: 18px; --c-size: 12px; --cols: 2; }
         body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; padding-top: 100px; -webkit-user-select: none; }
-        
         .header-fixed { position: fixed; top: 0; left: 0; right: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(15px); z-index: 1000; border-bottom: 0.5px solid #d1d1d6; padding-bottom: 12px; }
         .nav-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; }
         .nav-bar h1 { font-size: 17px; margin: 0; }
-        
         .tabs-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 15px; }
         .tab { background: #fff; padding: 6px 12px; border-radius: 15px; font-size: 13px; color: #8e8e93; border: 0.5px solid #d1d1d6; cursor: pointer; transition: all 0.2s; }
         .tab.active { background: #007AFF; color: #fff; border-color: #007AFF; }
-
         .grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 12px; padding-top: 10px; }
-        .card { 
-            background: white; border-radius: 14px; padding: 15px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05); aspect-ratio: 1 / 1;
-            display: flex; flex-direction: column; position: relative; cursor: grab;
-        }
+        .card { background: white; border-radius: 14px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); aspect-ratio: 1 / 1; display: flex; flex-direction: column; position: relative; cursor: grab; transition: transform 0.1s; }
+        .card:active { transform: scale(0.95); background: #f9f9f9; }
         .card-title { font-weight: bold; font-size: var(--t-size); margin-bottom: 5px; color: #000; word-break: break-all; }
         .card-content { font-size: var(--c-size); color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; }
-
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
         .modal-content { background: #fff; width: 85%; margin: 15% auto; border-radius: 20px; padding: 20px; max-height: 80vh; overflow-y: auto; }
         .setting-row { margin: 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid #eee; padding-bottom: 10px; }
-        textarea, input[type="text"] { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+        textarea, input[type="text"] { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 8px; margin-top: 5px; box-sizing: border-box; font-size: 16px; }
         .btn-group { display: flex; gap: 10px; margin-top: 20px; }
         button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold; font-size: 15px; }
         .save-btn { background: #007AFF; color: #fff; }
         .del-btn { background: #ff3b30; color: #fff; }
+        /* 吐司提示样式 */
+        #toast { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 3000; }
     </style>
 </head>
 <body>
+
+<div id="toast">已复制到剪贴板</div>
 
 <div class="header-fixed">
     <div class="nav-bar">
@@ -55,7 +51,7 @@
         <h3 id="modalTitle">编辑指令</h3>
         <input type="text" id="editTitle" placeholder="标题">
         <textarea id="editContent" rows="6" placeholder="内容"></textarea>
-        <input type="text" id="editTag" placeholder="分类标签 (例如: 工作)">
+        <input type="text" id="editTag" placeholder="分类标签">
         <div class="btn-group">
             <button class="del-btn" id="deleteBtn" onclick="deleteItem()">删除</button>
             <button onclick="toggleModal('editModal')">取消</button>
@@ -81,15 +77,24 @@
 </div>
 
 <script>
+    /** 核心拖拽库 Sortable.js (极简版内嵌) **/
+    !function(t,e){"object"==typeof exports&&"undefined"!=typeof module?module.exports=e():"function"==typeof define&&define.amd?define(e):(t=t||self).Sortable=e()}(this,function(){"use strict";function t(t){return(t=t.replace(/\s+/g,"")).split(",")}function e(t,e){var n=t.className;if(!n)return-1;var r=n.split(" ");return r.indexOf(e)}var n={animation:150};function r(t){this.el=t,this.options=Object.assign({},n),t["Sortable"+Date.now()]=this;var e=null,n=null;t.addEventListener("dragstart",function(t){e=t.target,t.dataTransfer.effectAllowed="move"}),t.addEventListener("dragover",function(t){t.preventDefault(),t.dataTransfer.dropEffect="move";var r=t.target.closest(".card")||t.target.closest(".tab");if(r&&r!==e){var o=r.getBoundingClientRect(),i=t.clientY>o.top+o.height/2;r.parentNode.insertBefore(e,i?r.nextSibling:r)}}),t.addEventListener("dragend",function(){n&&n()})}r.prototype.setEnd=function(t){this.onEnd=t};return function(t,e){var n=new r(t);n.options=Object.assign(n.options,e),t.querySelectorAll(".card, .tab").forEach(function(t){t.draggable=!0}),t.addEventListener("dragend",function(){e.onEnd&&e.onEnd()})}});
+
+    /** App 逻辑代码 **/
     let data = JSON.parse(localStorage.getItem('pb_data')) || [];
-    let config = JSON.parse(localStorage.getItem('pb_config')) || {
-        cols: 2, tSize: 18, cSize: 12, haptic: true, tags: ["工作", "生活"]
-    };
+    let config = JSON.parse(localStorage.getItem('pb_config')) || { cols: 2, tSize: 18, cSize: 12, haptic: true, tags: ["工作", "生活"] };
     let currentTag = '全部';
     let editId = null;
 
+    function showToast(text) {
+        const t = document.getElementById('toast');
+        t.innerText = text;
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 2000);
+    }
+
     function doHaptic() {
-        if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(10);
+        if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(20);
     }
 
     function renderTabs() {
@@ -98,62 +103,41 @@
         config.tags.forEach(tag => {
             container.innerHTML += `<div class="tab ${currentTag===tag?'active':''}" onclick="filterTag('${tag}')">${tag}</div>`;
         });
-        
-        new Sortable(container, {
-            animation: 150,
-            onEnd: () => {
-                const newTags = Array.from(container.querySelectorAll('.tab'))
-                    .map(el => el.innerText).filter(t => t !== '全部');
-                config.tags = newTags;
-                saveConfig();
-            }
-        });
+        new Sortable(container, { animation: 150, onEnd: () => {
+            config.tags = Array.from(container.querySelectorAll('.tab')).map(el => el.innerText).filter(t => t !== '全部');
+            saveConfig();
+        }});
     }
 
-    function filterTag(tag) {
-        doHaptic();
-        currentTag = tag;
-        renderTabs();
-        renderGrid();
-    }
+    function filterTag(tag) { doHaptic(); currentTag = tag; renderTabs(); renderGrid(); }
 
     function renderGrid() {
         const grid = document.getElementById('promptGrid');
         grid.innerHTML = '';
         const filtered = data.filter(item => currentTag === '全部' || item.tag === currentTag);
-
         filtered.forEach(item => {
             const card = document.createElement('div');
             card.className = 'card';
             card.dataset.id = item.id;
             card.innerHTML = `<div class="card-title">${item.title}</div><div class="card-content">${item.content}</div>`;
-            
             card.onclick = () => {
                 navigator.clipboard.writeText(item.content);
                 doHaptic();
-                alert('已复制到剪贴板！');
+                showToast('已复制！');
             };
-
             let timer;
             card.ontouchstart = () => { timer = setTimeout(() => openEditModal(item.id), 800); };
             card.ontouchend = () => clearTimeout(timer);
             grid.appendChild(card);
         });
-
-        new Sortable(grid, {
-            animation: 150,
-            onEnd: () => {
-                const newOrderIds = Array.from(grid.querySelectorAll('.card')).map(el => el.dataset.id);
-                const newData = [];
-                newOrderIds.forEach(id => {
-                    const item = data.find(d => d.id == id);
-                    if(item) newData.push(item);
-                });
-                data.forEach(d => { if(!newOrderIds.includes(d.id.toString())) newData.push(d); });
-                data = newData;
-                saveData();
-            }
-        });
+        new Sortable(grid, { animation: 150, onEnd: () => {
+            const ids = Array.from(grid.querySelectorAll('.card')).map(el => el.dataset.id);
+            let newData = [];
+            ids.forEach(id => { const itm = data.find(d => d.id == id); if(itm) newData.push(itm); });
+            data.forEach(d => { if(!ids.includes(d.id.toString())) newData.push(d); });
+            data = newData;
+            saveData();
+        }});
         updateStyles();
     }
 
@@ -198,8 +182,7 @@
     }
 
     function openEditModal(id) {
-        doHaptic();
-        editId = id;
+        doHaptic(); editId = id;
         const item = data.find(d => d.id === id);
         document.getElementById('modalTitle').innerText = "编辑指令";
         document.getElementById('editTitle').value = item.title;
@@ -219,29 +202,17 @@
         } else {
             data.push({id: Date.now(), title, content, tag});
         }
-        if(!config.tags.includes(tag) && tag !== '未分类') {
-            config.tags.push(tag);
-            saveConfig();
-        }
-        saveData();
-        toggleModal('editModal');
-        renderTabs();
-        renderGrid();
+        if(!config.tags.includes(tag) && tag !== '未分类') { config.tags.push(tag); saveConfig(); }
+        saveData(); toggleModal('editModal'); renderTabs(); renderGrid();
     }
 
     function deleteItem() {
-        if(confirm('确定删除此指令吗？')) {
-            data = data.filter(d => d.id !== editId);
-            saveData();
-            toggleModal('editModal');
-            renderGrid();
-        }
+        if(confirm('确定删除吗？')) { data = data.filter(d => d.id !== editId); saveData(); toggleModal('editModal'); renderGrid(); }
     }
 
     function exportData() {
         const str = btoa(unescape(encodeURIComponent(JSON.stringify({data, config}))));
-        alert('请在接下来的对话框中复制备份代码');
-        prompt('请复制并保存此代码：', str);
+        prompt('请复制备份代码：', str);
     }
 
     function importData() {
@@ -250,9 +221,8 @@
             try {
                 const res = JSON.parse(decodeURIComponent(escape(atob(str))));
                 data = res.data; config = res.config;
-                saveData(); saveConfig();
-                location.reload();
-            } catch(e) { alert('恢复失败，代码无效'); }
+                saveData(); saveConfig(); location.reload();
+            } catch(e) { alert('无效代码'); }
         }
     }
 
