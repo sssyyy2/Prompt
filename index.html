@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>指令库-终极稳定版</title>
+    <title>指令库</title>
     <style>
         :root { --t-size: 15px; --c-size: 10px; --cols: 3; }
         body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 8px; padding-top: 100px; -webkit-user-select: none; }
@@ -99,35 +99,23 @@ let currentTag = '全部';
 let isSorting = false;
 let editId = null;
 
-// 【终极解决方案：使用 UTF-8 安全的 Base64 编码】
-function exportData() {
-    const jsonStr = JSON.stringify({data, config});
-    // 先转成 UTF-8 编码，再转 Base64，彻底解决中文、符号乱码问题
-    const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
-    const textArea = document.createElement("textarea");
-    textArea.value = base64;
-    document.body.appendChild(textArea);
-    textArea.select();
-    try {
-        document.execCommand('copy');
-        showToast('✅ 备份代码已复制');
-    } catch (err) {
-        alert('手动复制此代码：' + base64);
-    }
-    document.body.removeChild(textArea);
-}
-
+// 【核心修复：加回剪贴板自动识别 + Base64】
 async function importData() {
-    let str = prompt('请粘贴备份代码：');
+    let clipboardText = "";
+    // 1. 尝试从剪贴板读取 (你要求的功能)
+    try { clipboardText = await navigator.clipboard.readText(); } catch (err) { console.log("无法读取剪贴板"); }
+    
+    let str = prompt('请粘贴备份代码：', clipboardText);
     if(!str || str.trim() === "") return;
     str = str.trim();
+    
     try {
         let decodedStr;
+        // 兼容旧格式和新 Base64 格式
         if (str.startsWith('%')) {
-            // 兼容你之前的旧格式
             decodedStr = decodeURIComponent(str);
         } else {
-            // 解码 Base64
+            // 使用更健壮的 Base64 解码
             decodedStr = decodeURIComponent(escape(atob(str)));
         }
         
@@ -135,7 +123,6 @@ async function importData() {
         if(res.data) {
             data = res.data; 
             if(res.config) config = res.config;
-            // 强制转换为数字，防止 UI 失效
             config.cols = parseInt(config.cols) || 3;
             config.tSize = parseInt(config.tSize) || 15;
             config.cSize = parseInt(config.cSize) || 10;
@@ -145,11 +132,28 @@ async function importData() {
             showToast('✅ 导入成功'); setTimeout(() => location.reload(), 500);
         }
     } catch(e) {
-        alert('❌ 导入失败：代码不完整或格式不支持');
+        alert('❌ 导入失败：格式不匹配。请确保复制了完整的备份代码。');
     }
 }
 
-// --- 保持你的所有功能完全不动 ---
+function exportData() {
+    const jsonStr = JSON.stringify({data, config});
+    // 转为 Base64，彻底规避特殊字符导致的“自产不自销”
+    const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
+    const textArea = document.createElement("textarea");
+    textArea.value = base64;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+        document.execCommand('copy');
+        showToast('✅ 备份代码已复制');
+    } catch (err) {
+        alert('请手动复制：' + base64);
+    }
+    document.body.removeChild(textArea);
+}
+
+// --- 排序、标签、触感、渲染逻辑完全同步你的底稿 ---
 function initSortable(el) {
     let dragEl = null;
     el.addEventListener('touchstart', e => { if (isSorting) { dragEl = e.target.closest('.card'); if(dragEl) dragEl.classList.add('dragging'); } }, {passive: false});
