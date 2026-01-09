@@ -8,22 +8,24 @@
     <title>指令库</title>
     <style>
         :root { --t-size: 15px; --c-size: 10px; --cols: 3; }
-        body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; padding-top: 100px; -webkit-user-select: none; }
+        /* 【关键改动】padding 从 20px 改为 8px，利用起左右边距 */
+        body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 8px; padding-top: 100px; -webkit-user-select: none; }
         .header-fixed { position: fixed; top: 0; left: 0; right: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(15px); z-index: 1000; border-bottom: 0.5px solid #d1d1d6; padding-bottom: 12px; }
-        .nav-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; height: 44px; }
+        .nav-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; height: 44px; }
         .nav-bar h1 { font-size: 19px; margin: 0; font-weight: 800; }
-        .tabs-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 15px; overflow-x: auto; white-space: nowrap; }
+        .tabs-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 10px; overflow-x: auto; white-space: nowrap; }
         .tab { background: #fff; padding: 5px 12px; border-radius: 12px; font-size: 13px; color: #8e8e93; border: 0.5px solid #d1d1d6; }
         .tab.active { background: #007AFF; color: #fff; border-color: #007AFF; }
         
-        .grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 10px; padding: 10px; }
+        /* 【关键改动】gap 从 10px 降为 6px，让方块更紧凑，标题空间更大 */
+        .grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 6px; padding: 5px 0; }
         
-        /* 排序动画 */
         @keyframes wobble { 0% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } 100% { transform: rotate(-1.2deg); } }
         .sorting-mode .card { animation: wobble 0.25s infinite; touch-action: none; }
         .sorting-mode .dragging { opacity: 0.5; transform: scale(1.1); animation: none; z-index: 10; }
 
-        .card { background: white; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); aspect-ratio: 1 / 1; display: flex; flex-direction: column; overflow: hidden; position: relative; transition: transform 0.2s; }
+        .card { background: white; border-radius: 12px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); aspect-ratio: 1 / 1; display: flex; flex-direction: column; overflow: hidden; position: relative; transition: transform 0.2s; }
+        /* 这里的标题会因为父容器变宽而获得更多显示空间 */
         .card-title { font-weight: bold; font-size: var(--t-size); margin-bottom: 6px; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-content { font-size: var(--c-size); color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; line-height: 1.4; pointer-events: none; }
         
@@ -74,7 +76,7 @@
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button style="background: #ff3b30; color: #fff;" id="deleteBtn" onclick="deleteItem()">删除</button>
             <button onclick="toggleModal('editModal')">取消</button>
-            <button class="save-btn" onclick="saveItem()">保存</button>
+            <button class="save-btn" onclick="saveItem()">保存修改</button>
         </div>
     </div>
 </div>
@@ -103,41 +105,29 @@ let currentTag = '全部';
 let isSorting = false;
 let editId = null;
 
-// 【核心修复】使用 URI 编码替代不稳定的 Base64
 async function importData() {
     let clipboardText = "";
     try { clipboardText = await navigator.clipboard.readText(); } catch (err) {}
     let str = prompt('请粘贴备份代码：', clipboardText);
     if(!str || str.trim() === "") return;
     str = str.trim();
-
     try {
         let decoded = "";
-        // 1. 尝试新的 URI 编码格式 (处理中文最稳)
-        try {
-            decoded = decodeURIComponent(str);
-        } catch(e) {
-            // 2. 如果失败，尝试老旧的 Base64 格式
+        try { decoded = decodeURIComponent(str); } catch(e) {
             try { decoded = decodeURIComponent(escape(atob(str))); }
             catch(e2) { decoded = decodeURIComponent(atob(str)); }
         }
-        
         let res = JSON.parse(decoded);
         if(res.data) {
-            data = res.data;
-            if(res.config) config = res.config;
+            data = res.data; if(res.config) config = res.config;
             localStorage.setItem('pb_data', JSON.stringify(data));
             localStorage.setItem('pb_config', JSON.stringify(config));
-            showToast('✅ 导入成功');
-            setTimeout(() => location.reload(), 500);
+            showToast('✅ 导入成功'); setTimeout(() => location.reload(), 500);
         }
-    } catch(e) {
-        alert('❌ 导入失败：代码可能不完整或格式错误');
-    }
+    } catch(e) { alert('❌ 导入失败'); }
 }
 
 function exportData() {
-    // 【核心修复】导出时直接使用 URI 编码，100% 互认
     const str = encodeURIComponent(JSON.stringify({data, config}));
     navigator.clipboard.writeText(str).then(() => { showToast('✅ 备份代码已复制'); });
 }
@@ -177,7 +167,7 @@ function renderTagPool() {
         pool.appendChild(chip);
     });
 }
-function resetEverything() { if(confirm('⚠️ 确定清空所有数据？')) { localStorage.clear(); location.reload(); } }
+function resetEverything() { if(confirm('确定清空所有数据？')) { localStorage.clear(); location.reload(); } }
 function showToast(text) { const t = document.getElementById('toast'); t.innerText = text; t.style.display = 'block'; setTimeout(() => { t.style.display = 'none'; }, 2000); }
 function doHaptic() { if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(25); }
 function renderTabs() {
