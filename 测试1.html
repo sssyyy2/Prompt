@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的指令库</title>
+    <style>
+        :root {
+            --title-size: 18px;
+            --content-size: 12px;
+            --columns: 2;
+        }
+        body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; padding-top: 60px; }
+        
+        /* 顶部栏 */
+        .header { position: fixed; top: 0; left: 0; right: 0; height: 50px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 100; border-bottom: 0.5px solid #ccc; }
+        .header h1 { font-size: 17px; margin: 0; }
+        .plus-btn { font-size: 28px; color: #007AFF; cursor: pointer; }
+
+        /* 栅格布局 */
+        .grid { display: grid; grid-template-columns: repeat(var(--columns), 1fr); gap: 12px; }
+        
+        /* 方块样式 */
+        .card { 
+            background: white; border-radius: 12px; padding: 12px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); aspect-ratio: 1 / 1;
+            display: flex; flex-direction: column; overflow: hidden;
+            position: relative; transition: transform 0.1s;
+        }
+        .card:active { transform: scale(0.95); background: #f0f0f0; }
+        .card-title { font-weight: bold; font-size: var(--title-size); margin-bottom: 6px; color: #000; }
+        .card-content { font-size: var(--content-size); color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
+
+        /* 设置面板 */
+        .settings-panel { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: none; border: 1px solid #ddd; }
+        .setting-item { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 弹窗 */
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.2); z-index: 200; }
+        input, textarea { width: 100%; margin: 10px 0; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 5px; }
+        .btns { display: flex; justify-content: space-between; }
+        .save-btn { color: #007AFF; font-weight: bold; }
+        .del-btn { color: #FF3B30; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <span onclick="toggleSettings()" style="color: #007AFF;">⚙️设置</span>
+    <h1>我的指令库</h1>
+    <span class="plus-btn" onclick="openModal()">+</span>
+</div>
+
+<div id="settingsPanel" class="settings-panel">
+    <div class="setting-item">每行显示几列: <input type="number" id="colInput" style="width:50px" onchange="updateStyles()"></div>
+    <div class="setting-item">标题字号: <input type="number" id="titleSizeInput" style="width:50px" onchange="updateStyles()"></div>
+    <div class="setting-item">内容字号: <input type="number" id="contentSizeInput" style="width:50px" onchange="updateStyles()"></div>
+</div>
+
+<div class="grid" id="promptGrid"></div>
+
+<div id="modal" class="modal">
+    <h3 id="modalTitle">新增指令</h3>
+    <input type="text" id="titleInput" placeholder="请输入标题 (如: 翻译助手)">
+    <textarea id="contentInput" rows="5" placeholder="请输入具体的 Prompt 内容"></textarea>
+    <div class="btns">
+        <span class="del-btn" id="deleteBtn" onclick="deletePrompt()">删除</span>
+        <span onclick="closeModal()">取消</span>
+        <span class="save-btn" onclick="savePrompt()">保存</span>
+    </div>
+</div>
+
+<script>
+    let prompts = JSON.parse(localStorage.getItem('myPrompts')) || [
+        {title: "默认指令", content: "这是一个测试指令，点击即可复制。"}
+    ];
+    let config = JSON.parse(localStorage.getItem('myConfig')) || { cols: 2, tSize: 18, cSize: 12 };
+    let editingIndex = -1;
+    let longPressTimer;
+
+    function render() {
+        const grid = document.getElementById('promptGrid');
+        grid.innerHTML = '';
+        prompts.forEach((p, index) => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `<div class="card-title">${p.title}</div><div class="card-content">${p.content}</div>`;
+            
+            // 短按复制
+            div.onclick = () => copyToClipboard(p.content);
+            
+            // 长按编辑
+            div.ontouchstart = () => { longPressTimer = setTimeout(() => openModal(index), 800); };
+            div.ontouchend = () => clearTimeout(longPressTimer);
+            
+            grid.appendChild(div);
+        });
+        updateStyles(false);
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            const tip = document.createElement('div');
+            tip.innerText = "已复制到剪贴板";
+            tip.style = "position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.7); color:white; padding:10px 20px; border-radius:20px; font-size:14px;";
+            document.body.appendChild(tip);
+            setTimeout(() => tip.remove(), 1500);
+        });
+    }
+
+    function openModal(index = -1) {
+        editingIndex = index;
+        document.getElementById('modal').style.display = 'block';
+        document.getElementById('deleteBtn').style.display = index === -1 ? 'none' : 'block';
+        if(index !== -1) {
+            document.getElementById('titleInput').value = prompts[index].title;
+            document.getElementById('contentInput').value = prompts[index].content;
+            document.getElementById('modalTitle').innerText = "编辑指令";
+        } else {
+            document.getElementById('titleInput').value = '';
+            document.getElementById('contentInput').value = '';
+            document.getElementById('modalTitle').innerText = "新增指令";
+        }
+    }
+
+    function savePrompt() {
+        const t = document.getElementById('titleInput').value;
+        const c = document.getElementById('contentInput').value;
+        if(editingIndex === -1) prompts.push({title: t, content: c});
+        else prompts[editingIndex] = {title: t, content: c};
+        localStorage.setItem('myPrompts', JSON.stringify(prompts));
+        closeModal();
+        render();
+    }
+
+    function deletePrompt() {
+        if(confirm('确定删除吗？')) {
+            prompts.splice(editingIndex, 1);
+            localStorage.setItem('myPrompts', JSON.stringify(prompts));
+            closeModal();
+            render();
+        }
+    }
+
+    function updateStyles(save = true) {
+        if(save) {
+            config.cols = document.getElementById('colInput').value;
+            config.tSize = document.getElementById('titleSizeInput').value;
+            config.cSize = document.getElementById('contentSizeInput').value;
+            localStorage.setItem('myConfig', JSON.stringify(config));
+        } else {
+            document.getElementById('colInput').value = config.cols;
+            document.getElementById('titleSizeInput').value = config.tSize;
+            document.getElementById('contentSizeInput').value = config.cSize;
+        }
+        document.documentElement.style.setProperty('--columns', config.cols);
+        document.documentElement.style.setProperty('--title-size', config.tSize + 'px');
+        document.documentElement.style.setProperty('--content-size', config.cSize + 'px');
+    }
+
+    function toggleSettings() {
+        const p = document.getElementById('settingsPanel');
+        p.style.display = p.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+    render();
+</script>
+</body>
+</html>
