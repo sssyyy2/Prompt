@@ -16,30 +16,31 @@
         .tab { background: #fff; padding: 5px 12px; border-radius: 12px; font-size: 13px; color: #8e8e93; border: 0.5px solid #d1d1d6; }
         .tab.active { background: #007AFF; color: #fff; border-color: #007AFF; }
         .grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 6px; padding: 5px 0; }
-        @keyframes wobble { 0% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } 100% { transform: rotate(-1.2deg); } }
-        .sorting-mode .card { animation: wobble 0.25s infinite; touch-action: none; }
-        .sorting-mode .dragging { opacity: 0.5; transform: scale(1.1); animation: none; z-index: 10; }
-        .card { background: white; border-radius: 12px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); aspect-ratio: 1 / 1; display: flex; flex-direction: column; overflow: hidden; position: relative; transition: transform 0.2s; }
+        .card { background: white; border-radius: 12px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); aspect-ratio: 1 / 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .card-title { font-weight: bold; font-size: var(--t-size); margin-bottom: 6px; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-content { font-size: var(--c-size); color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; line-height: 1.4; pointer-events: none; }
-        .tag-pool { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 10px; border: 1px dashed #ccc; }
-        .tag-chip { background: #fff; color: #007AFF; padding: 6px 12px; border-radius: 15px; font-size: 12px; border: 0.5px solid #007AFF; font-weight: 500; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
         .modal-content { background: #fff; width: 85%; margin: 15% auto; border-radius: 20px; padding: 20px; max-height: 80vh; overflow-y: auto; }
         .setting-row { margin: 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid #eee; padding-bottom: 10px; }
         textarea, input[type="text"] { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-top: 5px; box-sizing: border-box; font-size: 16px; }
         button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold; font-size: 15px; }
         .save-btn { background: #007AFF; color: #fff; }
-        .danger-btn { background: #fff; color: #ff3b30; border: 0.5px solid #ff3b30; margin-top: 20px; font-size: 13px; }
+        .danger-btn { background: #fff; color: #ff3b30; border: 0.5px solid #ff3b30; margin-top: 20px; }
         #toast { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 3000; }
+        @keyframes wobble { 0% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } 100% { transform: rotate(-1.2deg); } }
+        .sorting-mode .card { animation: wobble 0.25s infinite; touch-action: none; }
+        .sorting-mode .dragging { opacity: 0.5; transform: scale(1.1); animation: none; z-index: 10; }
+        .tag-pool { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 10px; border: 1px dashed #ccc; }
+        .tag-chip { background: #fff; color: #007AFF; padding: 6px 12px; border-radius: 15px; font-size: 12px; border: 0.5px solid #007AFF; }
     </style>
 </head>
 <body>
+
 <div id="toast"></div>
 <div class="header-fixed">
     <div class="nav-bar">
         <div id="normalNav" style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
-            <span onclick="toggleModal('settingsModal')" style="color:#007AFF; font-size:18px;">⚙️</span>
+            <span onclick="toggleModal('settingsModal')" style="font-size:18px;">⚙️</span>
             <h1>指令库</h1>
             <div>
                 <span onclick="enterSortMode()" style="color:#007AFF; margin-right: 15px; font-size:18px;">⇅</span>
@@ -53,15 +54,27 @@
     <div class="tabs-container" id="tabsList"></div>
 </div>
 <div class="grid" id="promptGrid"></div>
+
+<input type="file" id="fileInput" style="display: none;" accept=".txt">
+
 <div id="editModal" class="modal">
     <div class="modal-content">
         <h3 id="modalTitle">编辑指令</h3>
         <input type="text" id="editTitle" placeholder="标题">
         <textarea id="editContent" rows="8" placeholder="内容"></textarea>
-        <div style="margin-top:15px;"><label style="font-size: 13px; color: #8e8e93;">快速选择分类：</label><div class="tag-pool" id="tagPool"></div><input type="text" id="editTag" placeholder="或输入新标签" style="margin-top:10px;"></div>
-        <div style="display:flex; gap:10px; margin-top:20px;"><button style="background: #ff3b30; color: #fff;" id="deleteBtn" onclick="deleteItem()">删除</button><button onclick="toggleModal('editModal')">取消</button><button class="save-btn" onclick="saveItem()">保存修改</button></div>
+        <div style="margin-top:15px;">
+            <label style="font-size: 13px; color: #8e8e93;">快速选择分类：</label>
+            <div class="tag-pool" id="tagPool"></div> 
+            <input type="text" id="editTag" placeholder="或输入新标签" style="margin-top:10px;">
+        </div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button style="background: #ff3b30; color: #fff;" id="deleteBtn" onclick="deleteItem()">删除</button>
+            <button onclick="toggleModal('editModal')">取消</button>
+            <button class="save-btn" onclick="saveItem()">保存修改</button>
+        </div>
     </div>
 </div>
+
 <div id="settingsModal" class="modal">
     <div class="modal-content">
         <h3>App 设置</h3>
@@ -72,42 +85,51 @@
         <div class="setting-row">默认标签:</div>
         <textarea id="cfgTags" rows="2"></textarea>
         <hr style="margin:20px 0; border:0.5px solid #eee;">
-        <button onclick="exportData()" style="background:#f2f2f7; color:#007AFF;">一键备份 (复制代码)</button>
-        <button onclick="importData()" style="background:#f2f2f7; color:#000; margin-top:10px;">导入备份代码</button>
-        <button onclick="resetEverything()" class="danger-btn">⚠️ 彻底重置所有数据</button>
+        <button onclick="exportToLocalFile()" style="background:#34C759; color:#fff;">💾 保存数据到本地 Txt</button>
+        <button onclick="document.getElementById('fileInput').click()" style="background:#f2f2f7; color:#000; margin-top:10px;">📂 从 Txt 文件导入恢复</button>
+        <button onclick="resetEverything()" class="danger-btn">⚠️ 重置并清空</button>
         <button onclick="applySettings()" class="save-btn" style="margin-top:20px;">保存并关闭</button>
     </div>
 </div>
+
 <script>
 let data = JSON.parse(localStorage.getItem('pb_data')) || [];
-let config = JSON.parse(localStorage.getItem('pb_config')) || { cols: 3, tSize: 15, cSize: 10, haptic: true, tags: ["投资", "阅读"] };
+let config = JSON.parse(localStorage.getItem('pb_config')) || { cols: 3, tSize: 15, cSize: 10, haptic: true, tags: ["常用", "工作"] };
 let currentTag = '全部', isSorting = false, editId = null;
 
-function exportData() {
+// --- 本地文件存取 ---
+function exportToLocalFile() {
     const jsonStr = JSON.stringify({data, config});
     const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
-    const textArea = document.createElement("textarea");
-    textArea.value = base64; document.body.appendChild(textArea); textArea.select();
-    try { document.execCommand('copy'); showToast('✅ 备份代码已复制'); } catch (err) { alert('手动复制：' + base64); }
-    document.body.removeChild(textArea);
+    const blob = new Blob([base64], {type: "text/plain"});
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `指令库备份_${new Date().toLocaleDateString()}.txt`;
+    link.click();
+    showToast('已生成备份，请选择“存储到文件”');
 }
 
-function importData() {
-    let str = prompt('请粘贴备份代码：');
-    if(!str || str.trim() === "") return;
-    str = str.trim();
-    try {
-        let decodedStr = str.startsWith('%') ? decodeURIComponent(str) : decodeURIComponent(escape(atob(str)));
-        let res = JSON.parse(decodedStr);
-        if(res.data) {
-            data = res.data; if(res.config) config = res.config;
-            config.cols = parseInt(config.cols) || 3; config.tSize = parseInt(config.tSize) || 15; config.cSize = parseInt(config.cSize) || 10;
-            localStorage.setItem('pb_data', JSON.stringify(data)); localStorage.setItem('pb_config', JSON.stringify(config));
-            showToast('✅ 导入成功'); setTimeout(() => location.reload(), 500);
-        }
-    } catch(e) { alert('❌ 导入失败'); }
-}
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const content = e.target.result.trim();
+            const decodedStr = content.startsWith('%') ? decodeURIComponent(content) : decodeURIComponent(escape(atob(content)));
+            const res = JSON.parse(decodedStr);
+            if(res.data) {
+                data = res.data; config = res.config || config;
+                localStorage.setItem('pb_data', JSON.stringify(data));
+                localStorage.setItem('pb_config', JSON.stringify(config));
+                showToast('✅ 导入成功'); setTimeout(() => location.reload(), 500);
+            }
+        } catch(err) { alert('❌ 导入失败'); }
+    };
+    reader.readAsText(file);
+});
 
+// --- 其他功能代码（保持一致） ---
 function initSortable(el) {
     let dragEl = null;
     el.addEventListener('touchstart', e => { if (isSorting) { dragEl = e.target.closest('.card'); if(dragEl) dragEl.classList.add('dragging'); } }, {passive: false});
@@ -131,7 +153,7 @@ function renderTagPool() {
         chip.onclick = () => { document.getElementById('editTag').value = tag; doHaptic(); }; pool.appendChild(chip);
     });
 }
-function resetEverything() { if(confirm('确定清空所有数据？')) { localStorage.clear(); location.reload(); } }
+function resetEverything() { if(confirm('彻底清空？')) { localStorage.clear(); location.reload(); } }
 function showToast(text) { const t = document.getElementById('toast'); t.innerText = text; t.style.display = 'block'; setTimeout(() => { t.style.display = 'none'; }, 2000); }
 function doHaptic() { if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(25); }
 function renderTabs() {
@@ -154,10 +176,8 @@ function renderGrid() {
     document.documentElement.style.setProperty('--c-size', config.cSize + 'px');
 }
 function toggleModal(id) {
-    const m = document.getElementById(id);
-    m.style.display = (m.style.display === 'block') ? 'none' : 'block';
+    const m = document.getElementById(id); m.style.display = (m.style.display === 'block') ? 'none' : 'block';
     if(id === 'settingsModal') {
-        // 修正：直接读取 config 对象中的属性，确保数值正确填入输入框
         document.getElementById('cfgCols').value = config.cols;
         document.getElementById('cfgTSize').value = config.tSize;
         document.getElementById('cfgCSize').value = config.cSize;
@@ -166,8 +186,11 @@ function toggleModal(id) {
     }
 }
 function applySettings() {
-    config.cols = document.getElementById('cfgCols').value; config.tSize = document.getElementById('cfgTSize').value; config.cSize = document.getElementById('cfgCSize').value;
-    config.haptic = document.getElementById('cfgHaptic').checked; config.tags = document.getElementById('cfgTags').value.split(',').map(t=>t.trim()).filter(t=>t!=='');
+    config.cols = parseInt(document.getElementById('cfgCols').value) || 3;
+    config.tSize = parseInt(document.getElementById('cfgTSize').value) || 15;
+    config.cSize = parseInt(document.getElementById('cfgCSize').value) || 10;
+    config.haptic = document.getElementById('cfgHaptic').checked;
+    config.tags = document.getElementById('cfgTags').value.split(',').map(t=>t.trim()).filter(t=>t!=='');
     localStorage.setItem('pb_config', JSON.stringify(config)); toggleModal('settingsModal'); renderTabs(); renderGrid();
 }
 function openAddModal() {
