@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="icon.png">
+    
     <title>指令库</title>
     <style>
         :root { --t-size: 15px; --c-size: 10px; --cols: 3; }
@@ -65,7 +68,7 @@
         <div class="setting-row">标签管理:</div>
         <textarea id="cfgTags" rows="2" placeholder="标签用逗号隔开"></textarea>
         <hr style="margin:20px 0; border:0.5px solid #eee;">
-        <button onclick="exportData()" style="background:#f2f2f7; color:#007AFF;">一键备份 (复制乱码)</button>
+        <button onclick="exportData()" style="background:#f2f2f7; color:#007AFF;">一键备份 (复制代码)</button>
         <button onclick="importData()" style="background:#f2f2f7; color:#000; margin-top:10px;">导入备份</button>
         <button onclick="resetEverything()" class="danger-btn">⚠️ 彻底重置并清空</button>
         <button onclick="applySettings()" class="save-btn" style="margin-top:20px;">保存并关闭</button>
@@ -78,40 +81,26 @@ let config = JSON.parse(localStorage.getItem('pb_config')) || { cols: 3, tSize: 
 let currentTag = '全部';
 let editId = null;
 
-// 【核心逻辑】暴力兼容导入函数
+// 强力解码逻辑，支持各种版本
 async function importData() {
     let str = prompt('请粘贴旧版备份代码：');
     if(!str) return;
     str = str.trim();
-
     let decoded = "";
     try {
-        // 尝试 1: 新版标准解码 (Base64 -> Unescape -> DecodeURI)
         try { decoded = decodeURIComponent(escape(atob(str))); } 
         catch(e1) {
-            // 尝试 2: 旧版直接解码 (Base64 -> DecodeURI)
             try { decoded = decodeURIComponent(atob(str)); }
-            catch(e2) {
-                // 尝试 3: 纯 Base64 解码 (处理非中文或特殊编码)
-                decoded = atob(str);
-            }
+            catch(e2) { decoded = atob(str); }
         }
-
         const res = JSON.parse(decoded);
         if(res.data && res.config) {
-            data = res.data;
-            config = res.config;
+            data = res.data; config = res.config;
             localStorage.setItem('pb_data', JSON.stringify(data));
             localStorage.setItem('pb_config', JSON.stringify(config));
-            alert('导入成功！');
-            location.reload();
-        } else {
-            throw new Error('格式不对');
+            alert('导入成功！'); location.reload();
         }
-    } catch(e) {
-        alert('导入失败：该代码格式无法识别，请检查是否复制完整。');
-        console.error(e);
-    }
+    } catch(e) { alert('导入失败：格式无法识别'); }
 }
 
 function exportData() {
@@ -119,43 +108,23 @@ function exportData() {
     navigator.clipboard.writeText(str).then(() => { showToast('✅ 备份代码已复制'); });
 }
 
-function resetEverything() {
-    if(confirm('警告：这将清空所有本地指令！')) {
-        localStorage.clear();
-        location.reload();
-    }
-}
-
-function showToast(text) { 
-    const t = document.getElementById('toast'); 
-    t.innerText = text; t.style.display = 'block'; 
-    setTimeout(() => { t.style.display = 'none'; }, 2000); 
-}
-
+function resetEverything() { if(confirm('警告：这将清空所有本地指令！')) { localStorage.clear(); location.reload(); } }
+function showToast(text) { const t = document.getElementById('toast'); t.innerText = text; t.style.display = 'block'; setTimeout(() => { t.style.display = 'none'; }, 2000); }
 function doHaptic() { if (config.haptic && window.navigator.vibrate) window.navigator.vibrate(25); }
-
 function renderTabs() {
     const container = document.getElementById('tabsList');
     container.innerHTML = `<div class="tab ${currentTag==='全部'?'active':''}" onclick="filterTag('全部')">全部</div>`;
-    config.tags.forEach(tag => {
-        container.innerHTML += `<div class="tab ${currentTag===tag?'active':''}" onclick="filterTag('${tag}')">${tag}</div>`;
-    });
+    config.tags.forEach(tag => { container.innerHTML += `<div class="tab ${currentTag===tag?'active':''}" onclick="filterTag('${tag}')">${tag}</div>`; });
 }
-
 function filterTag(tag) { doHaptic(); currentTag = tag; renderTabs(); renderGrid(); }
-
 function renderGrid() {
-    const grid = document.getElementById('promptGrid');
-    grid.innerHTML = '';
+    const grid = document.getElementById('promptGrid'); grid.innerHTML = '';
     const filtered = data.filter(item => currentTag === '全部' || item.tag === currentTag);
     filtered.forEach(item => {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `<div class="card-title">${item.title}</div><div class="card-content">${item.content}</div>`;
-        card.onclick = () => {
-            navigator.clipboard.writeText(item.content).then(() => { doHaptic(); showToast('已复制到剪贴板'); });
-        };
-        // 长按编辑逻辑
+        card.onclick = () => { navigator.clipboard.writeText(item.content).then(() => { doHaptic(); showToast('已复制'); }); };
         let timer;
         card.ontouchstart = () => { timer = setTimeout(() => openEditModal(item.id), 600); };
         card.ontouchend = () => clearTimeout(timer);
@@ -165,10 +134,8 @@ function renderGrid() {
     document.documentElement.style.setProperty('--t-size', config.tSize + 'px');
     document.documentElement.style.setProperty('--c-size', config.cSize + 'px');
 }
-
 function toggleModal(id) {
-    const m = document.getElementById(id);
-    m.style.display = (m.style.display === 'block') ? 'none' : 'block';
+    const m = document.getElementById(id); m.style.display = (m.style.display === 'block') ? 'none' : 'block';
     if(id === 'settingsModal') {
         document.getElementById('cfgCols').value = config.cols;
         document.getElementById('cfgTSize').value = config.tSize;
@@ -177,64 +144,33 @@ function toggleModal(id) {
         document.getElementById('cfgTags').value = config.tags.join(',');
     }
 }
-
 function applySettings() {
-    config.cols = document.getElementById('cfgCols').value;
-    config.tSize = document.getElementById('cfgTSize').value;
-    config.cSize = document.getElementById('cfgCSize').value;
-    config.haptic = document.getElementById('cfgHaptic').checked;
+    config.cols = document.getElementById('cfgCols').value; config.tSize = document.getElementById('cfgTSize').value; config.cSize = document.getElementById('cfgCSize').value; config.haptic = document.getElementById('cfgHaptic').checked;
     config.tags = document.getElementById('cfgTags').value.split(',').map(t=>t.trim()).filter(t=>t!=='');
-    localStorage.setItem('pb_config', JSON.stringify(config));
-    toggleModal('settingsModal');
-    renderTabs();
-    renderGrid();
+    localStorage.setItem('pb_config', JSON.stringify(config)); toggleModal('settingsModal'); renderTabs(); renderGrid();
 }
-
 function openAddModal() {
-    editId = null;
-    document.getElementById('modalTitle').innerText = "新增指令";
-    document.getElementById('editTitle').value = '';
-    document.getElementById('editContent').value = '';
+    editId = null; document.getElementById('modalTitle').innerText = "新增指令";
+    document.getElementById('editTitle').value = ''; document.getElementById('editContent').value = '';
     document.getElementById('editTag').value = (currentTag === '全部' ? '' : currentTag);
-    document.getElementById('deleteBtn').style.display = 'none';
-    toggleModal('editModal');
+    document.getElementById('deleteBtn').style.display = 'none'; toggleModal('editModal');
 }
-
 function openEditModal(id) {
-    editId = id;
-    const item = data.find(d => d.id === id);
+    editId = id; const item = data.find(d => d.id === id);
     document.getElementById('modalTitle').innerText = "编辑指令";
-    document.getElementById('editTitle').value = item.title;
-    document.getElementById('editContent').value = item.content;
-    document.getElementById('editTag').value = item.tag;
-    document.getElementById('deleteBtn').style.display = 'block';
+    document.getElementById('editTitle').value = item.title; document.getElementById('editContent').value = item.content;
+    document.getElementById('editTag').value = item.tag; document.getElementById('deleteBtn').style.display = 'block';
     toggleModal('editModal');
 }
-
 function saveItem() {
-    const title = document.getElementById('editTitle').value || '未命名';
-    const content = document.getElementById('editContent').value || '';
-    const tag = document.getElementById('editTag').value || '未分类';
-    if(editId) {
-        const idx = data.findIndex(d => d.id === editId);
-        data[idx] = {id: editId, title, content, tag};
-    } else {
-        data.push({id: Date.now(), title, content, tag});
-    }
-    localStorage.setItem('pb_data', JSON.stringify(data));
-    toggleModal('editModal');
-    renderGrid();
+    const title = document.getElementById('editTitle').value || '未命名'; const content = document.getElementById('editContent').value || ''; const tag = document.getElementById('editTag').value || '未分类';
+    if(editId) { const idx = data.findIndex(d => d.id === editId); data[idx] = {id: editId, title, content, tag}; }
+    else { data.push({id: Date.now(), title, content, tag}); }
+    localStorage.setItem('pb_data', JSON.stringify(data)); toggleModal('editModal'); renderGrid();
 }
-
 function deleteItem() {
-    if(confirm('确定删除？')) {
-        data = data.filter(d => d.id !== editId);
-        localStorage.setItem('pb_data', JSON.stringify(data));
-        toggleModal('editModal');
-        renderGrid();
-    }
+    if(confirm('确定删除？')) { data = data.filter(d => d.id !== editId); localStorage.setItem('pb_data', JSON.stringify(data)); toggleModal('editModal'); renderGrid(); }
 }
-
 renderTabs();
 renderGrid();
 </script>
